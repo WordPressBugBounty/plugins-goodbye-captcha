@@ -1,3 +1,4 @@
+<?php defined( 'ABSPATH' ) || exit; ?>
 <p>Hi {admin-full-name},</p>
 <p>On {detection-date-time}, WPBruiser has detected a Brute Force Attack on your {current-site-link} website.</p>
 
@@ -46,8 +47,8 @@ if(!empty($arrSuggestions))
 				foreach($arrSuggestions as $suggestion)
 				{
 					echo '<tr>';
-					echo '<td style = "text-align: left; width: 20px;">' . ++$suggestionsCounter . '.</td>';
-					echo '<td style = "text-align: left; ">' . $suggestion . '</td>';
+					echo '<td style = "text-align: left; width: 20px;">' . esc_html(++$suggestionsCounter) . '.</td>';
+					echo '<td style = "text-align: left; ">' . wp_kses_post($suggestion) . '</td>';
 					echo '</tr>';
 				}
 			?>

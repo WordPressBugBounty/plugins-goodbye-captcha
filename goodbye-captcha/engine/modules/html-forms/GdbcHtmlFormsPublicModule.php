@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 final class GdbcHtmlFormsPublicModule extends GdbcBasePublicModule
 {
 	protected function __construct()
@@ -26,7 +28,7 @@ final class GdbcHtmlFormsPublicModule extends GdbcBasePublicModule
 	
 	public function getErrorMessage($errorMessage)
 	{
-		return $errorMessage = __('Your submission seems to be a spam!', GoodByeCaptcha::PLUGIN_SLUG);
+		return $errorMessage = __('Your submission seems to be a spam!', 'goodbye-captcha');
 	}
 	
 	public function injectTokenField($formOutputContent)

@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 {
 	CONST OPTION_AUTO_BLOCK_IP             = 'AutoBlockIp';
@@ -40,17 +42,17 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 			self::OPTION_AUTO_BLOCK_IP => array(
 				'Id'          => 1,
 				'Value'       => NULL,
-				'LabelText'   => __('Automatically Block IP Addresses', GoodByeCaptcha::PLUGIN_SLUG),
-				'Description' => __('Automatically block IP Addresses that are brute-forcing your system', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'   => __('Automatically Block IP Addresses', 'goodbye-captcha'),
+				'Description' => __('Automatically block IP Addresses that are brute-forcing your system', 'goodbye-captcha'),
 				'InputType'   => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
 			self::OPTION_PREVENT_USER_ENUM => array(
 				'Id'          => 2,
 				'Value'       => true,
-				'LabelText'   => __('Prevent User Enumeration', GoodByeCaptcha::PLUGIN_SLUG),
-				'Description' => __('Prevents bots from enumerating users through \'/?author=N\' scans, the oEmbed API, and the WordPress REST API', GoodByeCaptcha::PLUGIN_SLUG),
-				'DisplayText' => __('UserEnumeration', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'   => __('Prevent User Enumeration', 'goodbye-captcha'),
+				'Description' => __('Prevents bots from enumerating users through \'/?author=N\' scans, the oEmbed API, and the WordPress REST API', 'goodbye-captcha'),
+				'DisplayText' => __('UserEnumeration', 'goodbye-captcha'),
 				'InputType'   => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
@@ -58,18 +60,18 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 			self::OPTION_BLOCK_WEB_ATTACKERS => array(
 				'Id'          => 3,
 				'Value'       => NULL,
-				'LabelText'   => __('Block Web Attackers IPs', GoodByeCaptcha::PLUGIN_SLUG),
-				'Description' => __('Blocks most dangerous IP addresses involved in brute force attacks, cross-site scripting or SQL injection', GoodByeCaptcha::PLUGIN_SLUG),
-				'DisplayText' => __('Attacker', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'   => __('Block Web Attackers IPs', 'goodbye-captcha'),
+				'Description' => __('Blocks most dangerous IP addresses involved in brute force attacks, cross-site scripting or SQL injection', 'goodbye-captcha'),
+				'DisplayText' => __('Attacker', 'goodbye-captcha'),
 				'InputType'   => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
 			self::OPTION_BLOCK_ANONYMOUS_PROXY => array(
 				'Id'          => 4,
 				'Value'       => NULL,
-				'LabelText'   => __('Block Anonymous Proxy IPs', GoodByeCaptcha::PLUGIN_SLUG),
-				'Description' => __('Blocks most dangerous IP addresses associated with web proxies that shield the originator\'s IP address', GoodByeCaptcha::PLUGIN_SLUG),
-				'DisplayText' => __('Anonymizer', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'   => __('Block Anonymous Proxy IPs', 'goodbye-captcha'),
+				'Description' => __('Blocks most dangerous IP addresses associated with web proxies that shield the originator\'s IP address', 'goodbye-captcha'),
+				'DisplayText' => __('Anonymizer', 'goodbye-captcha'),
 				'InputType'   => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
@@ -92,9 +94,9 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 
 	public  function validateModuleSettingsFields($arrSettingOptions)
 	{
-		$arrSettingOptions = array_map('sanitize_text_field', (array)$arrSettingOptions);
+		$arrSettingOptions = $this->sanitizeSubmittedOptions($arrSettingOptions);
 
-		$this->registerSuccessMessage(__('Your changes were successfully saved!', GoodByeCaptcha::PLUGIN_SLUG));
+		$this->registerSuccessMessage(__('Your changes were successfully saved!', 'goodbye-captcha'));
 
 		return $arrSettingOptions;
 
@@ -102,18 +104,18 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 
 	public function getFormattedBlockedContent(GdbcAttemptEntity $attemptEntity)
 	{
-		$attemptEntity->Notes = (array)maybe_unserialize($attemptEntity->Notes);
+		$attemptEntity->Notes = (array)GoodByeCaptchaUtils::safeMaybeUnserialize($attemptEntity->Notes);
 		$arrContent           = array('table-head-rows' => '', 'table-body-rows' => '');
 
 		$section = null;
 		switch($this->getOptionNameByOptionId($attemptEntity->SectionId))
 		{
 			case self::OPTION_PREVENT_USER_ENUM :
-				$section = __('User Enumeration', GoodByeCaptcha::PLUGIN_SLUG);
+				$section = __('User Enumeration', 'goodbye-captcha');
 				break;
 
 			default:
-				$section = __('Brute Force', GoodByeCaptcha::PLUGIN_SLUG);
+				$section = __('Brute Force', 'goodbye-captcha');
 				break;
 
 		}
@@ -122,12 +124,13 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 		$tableBodyRows = '';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th colspan="2">' . sprintf(__("%s - Blocked Attempt", GoodByeCaptcha::PLUGIN_SLUG), $section) . '</th>';
+		/* translators: %s: name of the protected section the attempt was blocked on. */
+		$tableHeadRows .= '<th colspan="2">' . sprintf(__("%s - Blocked Attempt", 'goodbye-captcha'), $section) . '</th>';
 		$tableHeadRows .= '</tr>';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th>' . __('Field', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
-		$tableHeadRows .= '<th>' . __('Value', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
+		$tableHeadRows .= '<th>' . __('Field', 'goodbye-captcha') . '</th>';
+		$tableHeadRows .= '<th>' . __('Value', 'goodbye-captcha') . '</th>';
 		$tableHeadRows .= '</tr>';
 
 
@@ -135,7 +138,7 @@ class GdbcBruteForceAdminModule extends GdbcBaseAdminModule
 		{
 			$tableBodyRows .='<tr>';
 			$tableBodyRows .= '<td>' . self::getBlockedContentDisplayableKey($key) . '</td>';
-			$tableBodyRows .= '<td>' . wp_filter_kses(print_r($value, true))  . '</td>';
+			$tableBodyRows .= '<td>' . self::getEscapedBlockedContentValue($key, $value)  . '</td>';
 			$tableBodyRows .='</tr>';
 		}
 

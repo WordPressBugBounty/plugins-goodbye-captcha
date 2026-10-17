@@ -17,6 +17,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// Settings pages are rendered inside the WordPress Settings API, which performs
+// its own nonce check via settings_fields()/check_admin_referer() before any
+// option is written; the reads below only decide which page to display.
+
 abstract class MchGdbcBaseAdminPage
 {
 	private $pageBrowserTitle     = null;
@@ -93,7 +99,7 @@ abstract class MchGdbcBaseAdminPage
 					continue;
 
 				$arrMessages[$groupIndex] = true;
-				echo $message;
+				echo wp_kses_post($message);
 				break;
 			}
 		}
@@ -123,7 +129,11 @@ abstract class MchGdbcBaseAdminPage
 
 	public function saveModulesNetworkSettingsOptions()
 	{
-		if( empty($_REQUEST['action']) || strcasecmp($_REQUEST['action'], 'update') !== 0 || empty($_REQUEST['_wpnonce'])  || empty($_REQUEST['option_page']))
+		$requestAction = isset($_REQUEST['action'])      ? sanitize_text_field(wp_unslash($_REQUEST['action']))      : '';
+		$optionPage    = isset($_REQUEST['option_page']) ? sanitize_text_field(wp_unslash($_REQUEST['option_page'])) : '';
+		$nonce         = isset($_REQUEST['_wpnonce'])    ? sanitize_text_field(wp_unslash($_REQUEST['_wpnonce']))    : '';
+
+		if('' === $nonce || '' === $optionPage || 0 !== strcasecmp($requestAction, 'update'))
 			return;
 
 		if( ! MchGdbcWpUtils::isAdminInNetworkDashboard() || !$this->isActive())
@@ -132,15 +142,17 @@ abstract class MchGdbcBaseAdminPage
 		foreach($this->groupModulesList as $groupIndex => $groupedModules)
 		{
 			$settingsGroup = $this->getSettingGroupId($groupIndex);
-			if(0 !== strcmp($settingsGroup, $_REQUEST['option_page']))
+			if(0 !== strcmp($settingsGroup, $optionPage))
 				continue;
 
-			if( ! wp_verify_nonce($_REQUEST['_wpnonce'], "$settingsGroup-options") )
+			if( ! wp_verify_nonce($nonce, "$settingsGroup-options") )
 				continue;
 
 			foreach( ((array)$groupedModules->getGroupedModules()) as $moduleIndex => $adminModuleInstance )
 			{
-				$moduleNetworkOptions = isset($_REQUEST[$adminModuleInstance->getSettingKey()]) ? (array)$_REQUEST[$adminModuleInstance->getSettingKey()] : array();
+				$settingKey = $adminModuleInstance->getSettingKey();
+				// Each module's validateModuleSettingsFields() whitelists and sanitises this array.
+				$moduleNetworkOptions = isset($_REQUEST[$settingKey]) ? map_deep((array) wp_unslash($_REQUEST[$settingKey]), 'sanitize_text_field') : array();
 				$adminModuleInstance->saveNetworkSettingOptions($moduleNetworkOptions);
 			}
 
@@ -178,7 +190,11 @@ abstract class MchGdbcBaseAdminPage
 					add_option($adminModuleInstance->getSettingKey(), array(), '', 'yes' );
 				}
 
-				register_setting($settingsGroup, $adminModuleInstance->getSettingKey(), array( $adminModuleInstance, 'validateModuleSettingsFields' ) );
+				register_setting($settingsGroup, $adminModuleInstance->getSettingKey(), array(
+					'type'              => 'array',
+					'default'           => array(),
+					'sanitize_callback' => array( $adminModuleInstance, 'validateModuleSettingsFields' ),
+				));
 
 				//$sectionTitle = !empty($this->arrGroupSectionTitle[$groupIndex]) ? (string)$this->arrGroupSectionTitle[$groupIndex] : '';
 
@@ -228,9 +244,9 @@ abstract class MchGdbcBaseAdminPage
 
 			settings_fields( $this->getSettingGroupId($groupIndex) );
 			do_settings_sections( $this->getSettingGroupId($groupIndex) );
-			echo '<hr />';
+			// The rules that used to bracket the save button are drawn in CSS now,
+			// as a border on p.submit -- see gdbc-admin.css.
 			submit_button();
-			echo '<hr />';
 
 		echo  '</form>';
 
@@ -293,6 +309,9 @@ abstract class MchGdbcBaseAdminPage
 		$code .= '</div>';
 		$code .= '</div>';
 
+		// Contains do_meta_boxes() output (WordPress-generated settings forms).
+		// Deliberately not filtered: wp_kses would strip the form controls.
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- contains do_meta_boxes() output (WordPress-generated settings forms); filtering would strip the form controls.
 		echo $code;
 	}
 

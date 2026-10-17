@@ -17,13 +17,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class MchGdbcGroupedModules
 {
 	private $groupedModulesList = null;
 	private $groupTitle         = null;
 	private $groupDescription   = null;
 
-	public function __construct($groupTitle = null, array $groupedModulesList = null)
+	public function __construct($groupTitle = null, ?array $groupedModulesList = null)
 	{
 		$this->groupTitle = $groupTitle;
 		$this->groupedModulesList = array();

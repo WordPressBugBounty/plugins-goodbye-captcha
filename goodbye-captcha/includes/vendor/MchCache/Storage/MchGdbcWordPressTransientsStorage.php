@@ -17,13 +17,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class MchGdbcWordPressTransientsStorage extends MchGdbcCacheBaseStorage
 {
 	private $canUseDataBase = true;
 
 	public function __construct($canUseDataBase = true)
 	{
-		$this->canUseDataBase = (boolean)$canUseDataBase;
+		$this->canUseDataBase = (bool)$canUseDataBase;
 		parent::__construct();
 
 	}

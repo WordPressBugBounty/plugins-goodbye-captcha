@@ -17,6 +17,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// This module inspects submissions to a third-party public form to decide whether
+// they came from a bot. Those forms carry no plugin nonce, so reading $_POST
+// without one is intentional; values are validated before use.
+// phpcs:disable WordPress.Security.NonceVerification
+
 class GdbcEmailNotificationsPublicModule extends GdbcBasePublicModule
 {
 	public $EmailSubject    = null;
@@ -26,9 +33,6 @@ class GdbcEmailNotificationsPublicModule extends GdbcBasePublicModule
 	{
 		parent::__construct();
 
-		if( ! function_exists('wp_mail') ) {
-			require_once( ABSPATH . 'wp-includes/pluggable.php' );
-		}
 
 		if(!empty($_POST) && $this->getOption(GdbcEmailNotificationsAdminModule::OPTION_ADMIN_LOGGED_IN_DETECTED)) {
 			$this->addActionHook( 'wp_login', array( $this, 'userSuccessfullyLoggedIn' ), 0, 1 );
@@ -49,10 +53,10 @@ class GdbcEmailNotificationsPublicModule extends GdbcBasePublicModule
 		if(!MchGdbcWpUtils::fileExists($templateFilePath))
 			return;
 
-		//$this->EmailSubject = __('WPBruiser - Notification', GoodByeCaptcha::PLUGIN_SLUG);
+		//$this->EmailSubject = __('WPBruiser - Notification', 'goodbye-captcha');
 
-		$detectedDate = get_date_from_gmt ( date( 'Y-m-d H:i:s', MchGdbcHttpRequest::getServerRequestTime() ), 'l, F d, Y');
-		$detectedTime = get_date_from_gmt ( date( 'Y-m-d H:i:s', MchGdbcHttpRequest::getServerRequestTime() ), 'H:i:s');
+		$detectedDate = get_date_from_gmt ( gmdate( 'Y-m-d H:i:s', MchGdbcHttpRequest::getServerRequestTime() ), 'l, F d, Y');
+		$detectedTime = get_date_from_gmt ( gmdate( 'Y-m-d H:i:s', MchGdbcHttpRequest::getServerRequestTime() ), 'H:i:s');
 
 		$arrReplaceableContent = array(
 				'{current-site-link}' => MchGdbcWpUtils::getCurrentBlogLink(),
@@ -93,10 +97,11 @@ class GdbcEmailNotificationsPublicModule extends GdbcBasePublicModule
 
 		empty($emailAddressToSend) ? $emailAddressToSend = MchGdbcWpUtils::getAdminEmailAddress() : null;
 
-		empty($this->EmailSubject) ? $this->EmailSubject =  __('WPBruiser Notification', GoodByeCaptcha::PLUGIN_SLUG) : null;
+		empty($this->EmailSubject) ? $this->EmailSubject =  __('WPBruiser Notification', 'goodbye-captcha') : null;
 
 		//$emailContent = file_get_contents($this->layoutTemplateFilePath);
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading an email template shipped inside the plugin, not a remote URL.
 		$emailContent = @file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'notification-base-layout.html');
 
 		if(false !== $emailContent)

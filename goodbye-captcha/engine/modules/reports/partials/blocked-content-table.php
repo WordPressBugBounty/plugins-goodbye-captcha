@@ -17,14 +17,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
-<style type="text/css">
-
-	.table-striped-column > tbody > tr td:nth-of-type(odd) {
-		background-color: #f9f9f9;
-	}
-
-</style>
 
 <table class="table table-bordered table-striped-column">
 	<thead>

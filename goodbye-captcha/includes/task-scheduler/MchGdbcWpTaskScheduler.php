@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class MchGdbcWpTaskScheduler
 {
 	const SECONDS_IN_DAY     = 86400;
@@ -36,12 +38,12 @@ class MchGdbcWpTaskScheduler
 
 		$this->arrDefaultRecurrences['weekly'] = array(
 			'interval' => self::SECONDS_IN_WEEK,
-			'display' => __('Once Weekly')
+			'display' => __('Once Weekly', 'goodbye-captcha')
 		);
 
 		$this->arrDefaultRecurrences['monthly'] = array(
 			'interval' => self::SECONDS_IN_MONTH,
-			'display' => __('Once a month')
+			'display' => __('Once a month', 'goodbye-captcha')
 		);
 
 
@@ -106,8 +108,17 @@ class MchGdbcWpTaskScheduler
 			if(!$mchTask->isRecurringTask() || isset($this->arrDefaultRecurrences[$this->getFormattedRecurrence($mchTask->getRunningInterval())]))
 				continue;
 
-			$arrCronSchedules[$this->getFormattedRecurrence($mchTask->getRunningInterval())] = array('interval' => $mchTask->getRunningInterval(),
-																					     'display'  =>  __('Every ' . $mchTask->getRunningInterval() . ' seconds'));
+			// The interval must be interpolated with sprintf(), not concatenated inside
+			// __(): a translation call has to receive a single literal string so the
+			// string can be extracted for translation.
+			$arrCronSchedules[$this->getFormattedRecurrence($mchTask->getRunningInterval())] = array(
+				'interval' => $mchTask->getRunningInterval(),
+				'display'  => sprintf(
+					/* translators: %d: number of seconds between two runs of a scheduled task. */
+					__('Every %d seconds', 'goodbye-captcha'),
+					$mchTask->getRunningInterval()
+				),
+			);
 		}
 
 		return $arrCronSchedules;

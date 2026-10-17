@@ -1,6 +1,4 @@
-<script>
-	var attemptsCountryArray = <?php echo $countryAttemptsJs ?>;
-</script>
+<?php defined( 'ABSPATH' ) || exit; ?>
 
 	<article class="col-sm-6">
 		<div id="wid-id-2" class="gdbcwidget clearfix">

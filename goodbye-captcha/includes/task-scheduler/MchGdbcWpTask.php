@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 interface MchGdbcWpITask
 {
 	public function run();
@@ -46,6 +48,6 @@ abstract class MchGdbcWpTask implements MchGdbcWpITask
 
 	public function getTaskCronActionHookName()
 	{
-		return get_class($this) . '-' . $this->runningInterval . '-' . var_export($this->isRecurringTask, true);
+		return get_class($this) . '-' . $this->runningInterval . '-' . ($this->isRecurringTask ? 'true' : 'false');
 	}
 }

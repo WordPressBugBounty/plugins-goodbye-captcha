@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class GdbcContactFormsAdminPage extends GdbcBaseAdminPage
 {
 	public function __construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug)
@@ -53,7 +55,7 @@ class GdbcContactFormsAdminPage extends GdbcBaseAdminPage
 			$modulesList[] = GdbcQuformAdminModule::getInstance();
 
 		$this->registerGroupedModules(array(
-				new MchGdbcGroupedModules(__('WPBruiser - Popular Contact Forms Settings', GoodByeCaptcha::PLUGIN_SLUG), $modulesList)
+				new MchGdbcGroupedModules(__('WPBruiser - Popular Contact Forms Settings', 'goodbye-captcha'), $modulesList)
 			)
 		);
 

@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 final class GdbcWPMembersPublicModule extends GdbcBasePublicModule
 {
 
@@ -65,7 +67,7 @@ final class GdbcWPMembersPublicModule extends GdbcBasePublicModule
 
 		global $wpmem_themsg;
 
-		$wpmem_themsg = __('An error occurred while processing your request!', GoodByeCaptcha::PLUGIN_SLUG);
+		$wpmem_themsg = __('An error occurred while processing your request!', 'goodbye-captcha');
 
 	}
 

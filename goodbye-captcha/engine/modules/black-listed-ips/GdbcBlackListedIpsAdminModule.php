@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 {
 	CONST OPTION_BLACK_LISTED_IPS     = 'BlackListedIps';
@@ -50,7 +52,7 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 	public  function validateModuleSettingsFields($arrSettingOptions)
 	{
-		$arrSettingOptions  = array_map('sanitize_text_field', (array)$arrSettingOptions);
+		$arrSettingOptions = $this->sanitizeSubmittedOptions($arrSettingOptions);
 		$arrAlreadySavedIps = (array)$this->getOption(self::OPTION_BLACK_LISTED_IPS);
 
 		$action = 'add';
@@ -70,7 +72,7 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 			if( isset($arrAlreadySavedIps[$ipVersion][$minIpValue]) && $arrAlreadySavedIps[$ipVersion][$minIpValue] == $maxIpValue)
 			{
-				$this->registerSuccessMessage(__('Your changes were successfully saved!', GoodByeCaptcha::PLUGIN_SLUG));
+				$this->registerSuccessMessage(__('Your changes were successfully saved!', 'goodbye-captcha'));
 				unset($arrAlreadySavedIps[$ipVersion][$minIpValue]);
 			}
 
@@ -80,7 +82,7 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 		if(empty($preparedData[$ipVersion]) || !is_array($preparedData[$ipVersion]))
 		{
-			$this->registerErrorMessage(__('Invalid IP/CIDR/Range provided!', GoodByeCaptcha::PLUGIN_SLUG));
+			$this->registerErrorMessage(__('Invalid IP/CIDR/Range provided!', 'goodbye-captcha'));
 			$arrSettingOptions[self::OPTION_BLACK_LISTED_IPS] = $arrAlreadySavedIps;
 
 			return $arrSettingOptions;
@@ -88,7 +90,7 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 		if(!in_array($ipVersion, array(MchGdbcIPUtils::IP_VERSION_4, MchGdbcIPUtils::IP_VERSION_6)))
 		{
-			$this->registerErrorMessage(__('Invalid IP/CIDR/Range provided', GoodByeCaptcha::PLUGIN_SLUG));
+			$this->registerErrorMessage(__('Invalid IP/CIDR/Range provided', 'goodbye-captcha'));
 			$arrSettingOptions[self::OPTION_BLACK_LISTED_IPS] = $arrAlreadySavedIps;
 
 			return $arrSettingOptions;
@@ -98,7 +100,8 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 		{
 			if (GdbcIPUtils::isIpBlackListed($arrSettingOptions[self::OPTION_BLACK_LISTED_IPS]))
 			{
-				$this->registerErrorMessage(sprintf(__("The IP  %s is already black-listed!", GoodByeCaptcha::PLUGIN_SLUG), esc_html($arrSettingOptions[self::OPTION_BLACK_LISTED_IPS])));
+				/* translators: %s: the IP address that is already black-listed. */
+				$this->registerErrorMessage(sprintf(__("The IP  %s is already black-listed!", 'goodbye-captcha'), esc_html($arrSettingOptions[self::OPTION_BLACK_LISTED_IPS])));
 				$arrSettingOptions[self::OPTION_BLACK_LISTED_IPS] = $arrAlreadySavedIps;
 
 				return $arrSettingOptions;
@@ -125,7 +128,8 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 				if( ($minValue <= $preparedData[$ipVersion][0]) && ($preparedData[$ipVersion][1] <= $maxValue) )
 				{
-					$this->registerErrorMessage(sprintf(__("The IP Range  %s is already black-listed!", GoodByeCaptcha::PLUGIN_SLUG), esc_html($arrSettingOptions[self::OPTION_BLACK_LISTED_IPS])));
+					/* translators: %s: the IP range that is already black-listed. */
+					$this->registerErrorMessage(sprintf(__("The IP Range  %s is already black-listed!", 'goodbye-captcha'), esc_html($arrSettingOptions[self::OPTION_BLACK_LISTED_IPS])));
 					$arrSettingOptions[self::OPTION_BLACK_LISTED_IPS] = $arrAlreadySavedIps;
 
 					return $arrSettingOptions;
@@ -159,7 +163,7 @@ final class GdbcBlackListedIpsAdminModule extends GdbcBaseAdminModule
 
 		$arrSettingOptions[self::OPTION_BLACK_LISTED_IPS] = $arrAlreadySavedIps;
 
-		$this->registerSuccessMessage(__('Your changes were successfully saved!', GoodByeCaptcha::PLUGIN_SLUG));
+		$this->registerSuccessMessage(__('Your changes were successfully saved!', 'goodbye-captcha'));
 
 		return $arrSettingOptions;
 	}

@@ -18,19 +18,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
 
-if (!defined('PHP_VERSION_ID'))
-{
-	$version = explode('.', PHP_VERSION);
 
-	define('PHP_VERSION_ID', ($version[0] * 10000 + $version[1] * 100 + $version[2]));
-
-	unset($version);
-}
-
-(PHP_VERSION_ID < 50300)
-	? spl_autoload_register( array( 'MchGdbcLibAutoloader', 'autoLoadLibraryClasses' ), false)
-	: spl_autoload_register( array( 'MchGdbcLibAutoloader', 'autoLoadLibraryClasses' ), false, true );
+// Prepend this autoloader so library classes resolve before other autoloaders.
+// The $throw argument is intentionally omitted: it was deprecated in PHP 8.0 and
+// passing false emits "Argument #2 ($do_throw) has been ignored".
+spl_autoload_register( array( 'MchGdbcLibAutoloader', 'autoLoadLibraryClasses' ), true, true );
 
 final class MchGdbcLibAutoloader
 {
@@ -50,7 +44,6 @@ final class MchGdbcLibAutoloader
 				'MchGdbcBaseAdminPlugin'  => '/plugin/MchGdbcBaseAdminPlugin.php',
 				'MchGdbcBasePublicPlugin' => '/plugin/MchGdbcBasePublicPlugin.php',
 				'MchGdbcBaseAdminPage'    => '/plugin/MchGdbcBaseAdminPage.php',
-				'MchGdbcPluginUpdater'    => '/plugin/MchGdbcPluginUpdater.php',
 
 				'MchGdbcUtils'       => '/utils/MchGdbcUtils.php',
 				'MchGdbcWpUtils'       => '/utils/MchGdbcWpUtils.php',
@@ -69,13 +62,7 @@ final class MchGdbcLibAutoloader
 				//'MchMaxMindGeoIp' => '/vendor/MaxMind/MchMaxMindGeoIp.php',
 
 				'MchGdbcCache' => '/vendor/MchCache/MchGdbcCache.php',
-				'MchGdbcCacheFileStorage' => '/vendor/MchCache/Storage/MchGdbcCacheFileStorage.php',
 				'MchGdbcWordPressTransientsStorage' => '/vendor/MchCache/Storage/MchGdbcWordPressTransientsStorage.php',
-				'MchGdbcCacheAPCUStorage' => '/vendor/MchCache/Storage/MchGdbcCacheAPCUStorage.php',
-				'MchGdbcCacheAPCStorage' => '/vendor/MchCache/Storage/MchGdbcCacheAPCStorage.php',
-				'MchGdbcCacheXCacheStorage' => '/vendor/MchCache/Storage/MchGdbcCacheXCacheStorage.php',
-				'MchGdbcCacheZendMemoryStorage' => '/vendor/MchCache/Storage/MchGdbcCacheZendMemoryStorage.php',
-				'MchGdbcCacheZendDiskStorage' => '/vendor/MchCache/Storage/MchGdbcCacheZendDiskStorage.php',
 
 				'MchGdbcCacheBaseStorage' => '/vendor/MchCache/Storage/MchGdbcCacheBaseStorage.php',
 

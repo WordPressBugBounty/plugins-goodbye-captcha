@@ -17,6 +17,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// This module inspects submissions to a third-party public form to decide whether
+// they came from a bot. Those forms carry no plugin nonce, so reading $_POST
+// without one is intentional; values are validated before use.
+// phpcs:disable WordPress.Security.NonceVerification
+
 final class GoodByeCaptchaUtils
 {
 	public static function isAffiliateWPActivated()
@@ -29,10 +36,6 @@ final class GoodByeCaptchaUtils
 		return class_exists('Easy_Digital_Downloads');
 	}
 
-	public static function isZmAlrActivated()
-	{
-		return defined('ZM_ALR_NAMESPACE');
-	}
 
 	public static function isUserProfileMadeEasyActivated()
 	{
@@ -74,15 +77,7 @@ final class GoodByeCaptchaUtils
 		return class_exists('Ninja_Forms');
 	}
 
-	public static function isPlanSoFormsActivated()
-	{
-		return function_exists('psfb_register');
-	}
 
-	public static function isSeamlessDonationsActivated()
-	{
-		return function_exists('seamless_donations_init');
-	}
 
 	public static function isGravityFormsActivated()
 	{
@@ -183,7 +178,7 @@ final class GoodByeCaptchaUtils
 			return $validReferer;
 
 		$referer    = wp_get_referer();
-		$actualHost = parse_url(home_url(), PHP_URL_HOST);
+		$actualHost = wp_parse_url(home_url(), PHP_URL_HOST);
 
 		return $validReferer = (!empty($referer) && !empty($actualHost) && false !== stripos($referer, $actualHost));
 	}
@@ -193,7 +188,7 @@ final class GoodByeCaptchaUtils
 		if(empty($_SERVER['SERVER_SOFTWARE']))
 			return false;
 
-		return (false !== stripos($_SERVER['SERVER_SOFTWARE'], 'nginx')) && (@php_sapi_name() === 'fpm-fcgi');
+		return (false !== stripos(sanitize_text_field(wp_unslash($_SERVER['SERVER_SOFTWARE'])), 'nginx')) && (@php_sapi_name() === 'fpm-fcgi');
 	}
 
 	public static function isJetPackPluginActivated()
@@ -551,9 +546,6 @@ final class GoodByeCaptchaUtils
 					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcUltimateMemberAdminModule::OPTION_ULTIMATE_MEMBER_LOGIN_FORM);
 					break;
 
-				case GdbcModulesController::MODULE_ULTRA_COMMUNITY :
-					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcUltraCommunityAdminModule::OPTION_LOGIN_FORM_PROTECTION_ACTIVATED);
-					break;
 
 				case GdbcModulesController::MODULE_WP_MEMBERS :
 					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcWPMembersAdminModule::OPTION_LOGIN_FORM_PROTECTION_ACTIVATED);
@@ -571,13 +563,7 @@ final class GoodByeCaptchaUtils
 					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName),  GdbcUPMEAdminModule::UPME_LOGIN_FORM);
 					break;
 
-				case GdbcModulesController::MODULE_ZM_ALR :
-					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcZmAlrAdminModule::OPTION_ZM_ALR_LOGIN_FORM);
-					break;
 
-				case GdbcModulesController::MODULE_PLANSO_FORMS :
-					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcPlanSoFormsAdminModule::OPTION_PLANSO_LOGIN_FORM);
-					break;
 
 				case GdbcModulesController::MODULE_MEMBER_PRESS :
 					$loginEntitiesList[] = new GdbcAttemptEntity(GdbcModulesController::getModuleIdByName($moduleName), GdbcMemberPressAdminModule::OPTION_MEMBER_PRESS_LOGIN_FORM);
@@ -662,31 +648,39 @@ final class GoodByeCaptchaUtils
 	/*
 	 * return /MchGdbcCache
 	 */
-	public static function getAvailableCacheStorage($dirPathForFileStorage)
+	/**
+	 * Cache used for the brute-force "site under attack" flag.
+	 *
+	 * Transients only. Earlier releases preferred a file store under wp-content,
+	 * which the WordPress.org guidelines do not allow; nothing else was kept there,
+	 * and the transient API already sits on top of the object cache when the site
+	 * has one.
+	 */
+	public static function getAvailableCacheStorage()
 	{
-		static $cacheStorage = false;
-		if(false !== $cacheStorage)
+		static $cacheStorage = null;
+		if(null !== $cacheStorage)
 			return $cacheStorage;
 
-		$arrPossibleCacheStorage = array(
-			!empty($dirPathForFileStorage) ? new MchGdbcCacheFileStorage($dirPathForFileStorage, true, 'wbr') : null,
-			new MchGdbcWordPressTransientsStorage(false),
-			new MchGdbcCacheAPCUStorage(),
-			new MchGdbcCacheAPCStorage(),
-			new MchGdbcCacheXCacheStorage(),
-			new MchGdbcCacheZendMemoryStorage(),
-			new MchGdbcCacheZendDiskStorage(),
-			new MchGdbcWordPressTransientsStorage(true),
-		);
+		return $cacheStorage = new MchGdbcCache(new MchGdbcWordPressTransientsStorage(true));
+	}
 
-		foreach ($arrPossibleCacheStorage as $cacheStorageObject) {
-			if (null === $cacheStorageObject || !$cacheStorageObject->isAvailable())
-				continue;
-
-			return $cacheStorage = new MchGdbcCache($cacheStorageObject);
-		}
-
-		return $cacheStorage = null;
+	/**
+	 * Safely unserialize data without ever instantiating PHP objects.
+	 *
+	 * WordPress' maybe_unserialize()/unserialize() will happily rebuild objects
+	 * from a serialized string, which allows PHP Object Injection when the input
+	 * is attacker-controlled (see CVE-2026-65556). This helper is a drop-in
+	 * replacement for maybe_unserialize() that forbids object instantiation, so a
+	 * crafted payload can never reach __wakeup()/__destruct() gadget chains.
+	 *
+	 * @param mixed $data Value that may be a serialized string.
+	 * @return mixed Unserialized value with objects neutralized, or the original
+	 *               value when it is not a serialized string, or false on failure.
+	 */
+	public static function safeMaybeUnserialize($data)
+	{
+		return MchGdbcUtils::safeMaybeUnserialize($data);
 	}
 
 

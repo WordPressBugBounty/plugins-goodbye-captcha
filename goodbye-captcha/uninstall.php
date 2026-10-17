@@ -3,10 +3,10 @@
 /**
  *
  * @package   WPBruiser
- * @author    Mihai Chelaru
+ * @author    Mihai Chelaru, WPZOOM
  * @license   GPL-2.0+
- * @link      http://www.wpbruiser.com
- * @copyright 2014 WPBruiser
+ * @link      https://wordpress.org/plugins/goodbye-captcha/
+ * @copyright 2014 Mihai Chelaru, 2026 WPZOOM
  *
  */
 
@@ -23,11 +23,8 @@ class GoodByeCaptchaUninstaller
 			exit;
 		}
 
-		if(is_callable(array('GoodByeCaptcha', 'isProVersion')) && GoodByeCaptcha::isProVersion() && is_plugin_active(plugin_basename(GoodByeCaptcha::getMainFilePath()))) {
-			return;
-		}
-
 		GdbcTaskScheduler::unScheduleGdbcTasks();
+		GdbcBruteGuardian::deleteSiteFlags();
 
 		foreach(GdbcModulesController::getRegisteredModules() as $moduleName => $arrModuleInfo)
 		{
@@ -43,6 +40,10 @@ class GoodByeCaptchaUninstaller
 		$adminNotice->deleteAllNotices();
 
 		global $wpdb;
+		// Dropping the plugin's own table on uninstall. The table name comes from
+		// $wpdb->base_prefix, never from user input, and identifiers cannot be bound
+		// as prepare() placeholders. There is nothing to cache during uninstall.
+		// phpcs:ignore WordPress.DB, PluginCheck.Security.DirectDB
 		$wpdb->query("DROP TABLE IF EXISTS " . GdbcDbAccessController::getAttemptsTableName());
 
 	}

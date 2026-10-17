@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 final class GdbcJetPackContactFormAdminModule  extends GdbcBaseAdminModule
 {
 	CONST OPTION_IS_JETPACK_CONTACT_FORM_ACTIVATE  = 'IsJPCFActivated';
@@ -38,7 +40,7 @@ final class GdbcJetPackContactFormAdminModule  extends GdbcBaseAdminModule
 			self::OPTION_IS_JETPACK_CONTACT_FORM_ACTIVATE => array(
 				'Id'         => 1,
 				'Value'      => NULL,
-				'LabelText'  => __('Jetpack Contact Form', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'  => __('Jetpack Contact Form', 'goodbye-captcha'),
 				'InputType'  => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
@@ -49,20 +51,16 @@ final class GdbcJetPackContactFormAdminModule  extends GdbcBaseAdminModule
 	}
 
 
-	public  function validateModuleSettingsFields($arrSettingOptions)
-	{
-		return $arrSettingOptions;
-	}
 
 	public  function renderModuleSettingsSectionHeader(array $arrSectionInfo)
 	{
-//		echo '<h3>' . __('Popular Contact Forms Settings', GoodByeCaptcha::PLUGIN_SLUG) . '</h3><hr />';
-//		echo '<h4>' . __('Enable protection for the following popular contact forms:', GoodByeCaptcha::PLUGIN_SLUG) . '</h4>';
+//		echo '<h3>' . esc_html__('Popular Contact Forms Settings', 'goodbye-captcha') . '</h3><hr />';
+//		echo '<h4>' . esc_html__('Enable protection for the following popular contact forms:', 'goodbye-captcha') . '</h4>';
 	}
 
 	public function getFormattedBlockedContent(GdbcAttemptEntity $attemptEntity)
 	{
-		$attemptEntity->Notes = (array)maybe_unserialize($attemptEntity->Notes);
+		$attemptEntity->Notes = (array)GoodByeCaptchaUtils::safeMaybeUnserialize($attemptEntity->Notes);
 		$arrContent           = array('table-head-rows' => '', 'table-body-rows' => '');
 		$formTitle            = isset($attemptEntity->Notes['form-title']) ? $attemptEntity->Notes['form-title'] : '';
 
@@ -72,19 +70,20 @@ final class GdbcJetPackContactFormAdminModule  extends GdbcBaseAdminModule
 		$tableBodyRows = '';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th colspan="2">' . sprintf(__("%s - Blocked Attempt", GoodByeCaptcha::PLUGIN_SLUG), $formTitle) . '</th>';
+		/* translators: %s: title of the contact form the attempt was blocked on. */
+		$tableHeadRows .= '<th colspan="2">' . sprintf(__("%s - Blocked Attempt", 'goodbye-captcha'), $formTitle) . '</th>';
 		$tableHeadRows .= '</tr>';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th>' . __('Field', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
-		$tableHeadRows .= '<th>' . __('Value', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
+		$tableHeadRows .= '<th>' . __('Field', 'goodbye-captcha') . '</th>';
+		$tableHeadRows .= '<th>' . __('Value', 'goodbye-captcha') . '</th>';
 		$tableHeadRows .= '</tr>';
 
 		foreach($attemptEntity->Notes as $key => $value)
 		{
 			$tableBodyRows .='<tr>';
 			$tableBodyRows .= '<td>' . self::getBlockedContentDisplayableKey($key) . '</td>';
-			$tableBodyRows .= '<td>' . wp_filter_kses(print_r($value, true))  . '</td>';
+			$tableBodyRows .= '<td>' . self::getEscapedBlockedContentValue($key, $value)  . '</td>';
 			$tableBodyRows .='</tr>';
 		}
 

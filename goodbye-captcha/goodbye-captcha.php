@@ -2,20 +2,26 @@
 /**
  *
  * @package   WPBruiser
- * @author    Mihai Chelaru
- * @link      http://www.wpbruiser.com
- * @copyright 2018 WPBruiser
+ * @author    WPZOOM
+ * @link      https://wordpress.org/plugins/goodbye-captcha/
+ * @copyright 2014-2018 Mihai Chelaru, 2026 WPZOOM
  *
  * @wordpress-plugin
  * Plugin Name: WPBruiser
- * Plugin URI: http://www.wpbruiser.com
+ * Plugin URI: https://wordpress.org/plugins/goodbye-captcha/
  * Description: An extremely powerful anti-spam plugin that blocks spambots without annoying captcha images.
- * Version: 3.1.43
- * Author: Mihai Chelaru
- * Author URI: http://www.wpbruiser.com
- * Text Domain: wp-bruiser
+ * Version: 3.2.1
+ * Requires at least: 6.5
+ * Requires PHP: 7.4
+ * Author: WPZOOM
+ * Author URI: https://wpzoom.com/
+ * License: GPLv2 or later
+ * License URI: http://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: goodbye-captcha
  * Domain Path: /languages
  */
+
+defined( 'ABSPATH' ) || exit;
 
 
 if(!class_exists('GoodByeCaptcha', false))
@@ -23,10 +29,15 @@ if(!class_exists('GoodByeCaptcha', false))
 	class GoodByeCaptcha
 	{
 		
-		CONST PLUGIN_VERSION    = '3.1.43';
-		CONST PLUGIN_SLUG       = 'wp-bruiser';
+		CONST PLUGIN_VERSION    = '3.2.1';
+		// PLUGIN_SLUG is also the prefix for option keys and admin menu slugs, so it
+		// must keep its historical value or existing installs lose their settings.
+		// The text domain is separate and must equal the WordPress.org slug.
+		CONST PLUGIN_SLUG        = 'wp-bruiser';
+		CONST PLUGIN_TEXT_DOMAIN = 'goodbye-captcha';
 		CONST PLUGIN_NAME       = 'WPBruiser';
-		CONST PLUGIN_SITE_URL   = 'https://www.wpbruiser.com';
+		CONST PLUGIN_SITE_URL   = 'https://wordpress.org/plugins/goodbye-captcha/';
+		CONST PLUGIN_SUPPORT_URL = 'https://wordpress.org/support/plugin/goodbye-captcha/';
 		CONST PLUGIN_SHORT_CODE = 'wpbr';
 
 		private static $arrClassMap = array(
@@ -45,13 +56,11 @@ if(!class_exists('GoodByeCaptcha', false))
 			'GdbcContactFormsAdminPage'   => '/engine/admin/pages/GdbcContactFormsAdminPage.php',
 			'GdbcSettingsAdminPage'       => '/engine/admin/pages/GdbcSettingsAdminPage.php',
 			'GdbcWordpressAdminPage'      => '/engine/admin/pages/GdbcWordpressAdminPage.php',
-			'GdbcExtensionsAdminPage'     => '/engine/admin/pages/GdbcExtensionsAdminPage.php',
 			'GdbcECommerceAdminPage'      => '/engine/admin/pages/GdbcECommerceAdminPage.php',
 			'GdbcNotificationsAdminPage'  => '/engine/admin/pages/GdbcNotificationsAdminPage.php',
 			'GdbcMembershipAdminPage'     => '/engine/admin/pages/GdbcMembershipAdminPage.php',
 			'GdbcSecurityAdminPage'       => '/engine/admin/pages/GdbcSecurityAdminPage.php',
 			'GdbcOthersAdminPage'         => '/engine/admin/pages/GdbcOthersAdminPage.php',
-			'GdbcLicensesAdminPage'       => '/engine/admin/pages/GdbcLicensesAdminPage.php',
 			'GdbcReportsAdminPage'        => '/engine/admin/pages/GdbcReportsAdminPage.php',
 			'GdbcWelcomeAdminPage'        => '/engine/admin/pages/GdbcWelcomeAdminPage.php',
 			'GdbcAdminNotice'             => '/engine/admin/GdbcAdminNotice.php',
@@ -70,14 +79,13 @@ if(!class_exists('GoodByeCaptcha', false))
 		public static function startRunning()
 		{
 
-			GdbcUpdatesController::updateToCurrentVersion();
-
 			$arrPluginInfo = array(
 				'PLUGIN_DOMAIN_PATH' => 'languages',
 				'PLUGIN_MAIN_FILE'   => self::getMainFilePath(),
 				'PLUGIN_SHORT_CODE'  => self::PLUGIN_SHORT_CODE,
 				'PLUGIN_VERSION'     => self::PLUGIN_VERSION,
 				'PLUGIN_SLUG'        => self::PLUGIN_SLUG,
+				'PLUGIN_TEXT_DOMAIN' => self::PLUGIN_TEXT_DOMAIN,
 			);
 
 			if (MchGdbcWpUtils::isAjaxRequest()) {
@@ -107,16 +115,9 @@ if(!class_exists('GoodByeCaptcha', false))
 			return null !== $isNetworkActivated ? $isNetworkActivated : $isNetworkActivated = MchGdbcWpUtils::isPluginNetworkActivated(self::getMainFilePath());
 		}
 
-		public static function isProVersion()
-		{
-			return class_exists('WPBruiserPro', false);
-		}
-
 		public static function getMainFilePath()
 		{
-			static $mainFilePath = null;
-
-			return null !== $mainFilePath ? $mainFilePath : ($mainFilePath = self::isProVersion() ? dirname(__FILE__) . DIRECTORY_SEPARATOR . '__wpbruiser.php' : __FILE__);
+			return __FILE__;
 		}
 
 		public static function activate()
@@ -131,7 +132,7 @@ if(!class_exists('GoodByeCaptcha', false))
 
 	require_once dirname(__FILE__) . '/includes/MchGdbcLibAutoloader.php';
 
-	spl_autoload_register(array('GoodByeCaptcha', 'classAutoLoad'), false);
+	spl_autoload_register(array('GoodByeCaptcha', 'classAutoLoad'));
 
 
 	if (defined('ABSPATH'))
@@ -139,18 +140,19 @@ if(!class_exists('GoodByeCaptcha', false))
 
 		GdbcIPUtils::getClientIpAddress();
 
-		if (!empty($_GET['gdbc-client']) && file_exists($filePath = dirname(__FILE__) . '/assets/public/scripts/gdbc-client-new.js.php')) {
-			require_once(ABSPATH . 'wp-includes/pluggable.php');
-			(!defined('LOGGED_IN_COOKIE') && function_exists('wp_cookie_constants')) ? wp_cookie_constants() : null;
-			require $filePath;
-			exit;
-		}
 
-		if (MchGdbcWpUtils::isAjaxRequest()) {
-			GdbcAjaxController::processRequest();
-		}
+		// Upgrade steps and first-run defaults run on `init`, not `plugins_loaded`: saving
+		// the defaults reads the modules' translated option metadata, and translating
+		// before `init` triggers WordPress' too-early text domain notice. Registered
+		// before the brute-force guard below, so at equal priority it runs first.
+		add_action('init', array('GdbcUpdatesController', 'updateToCurrentVersion'), 0);
 
-		GdbcBruteGuardian::startGuarding();
+		// Hooked to `init` rather than called here: startGuarding() reaches the admin
+		// modules' option metadata, which is translated, and calling __() before `init`
+		// makes WordPress load the text domain too early (notice added in WP 6.7).
+		// It only acts on non-empty POST requests, and WordPress processes logins,
+		// comments and admin-ajax after `init`, so the timing is unchanged in practice.
+		add_action('init', array('GdbcBruteGuardian', 'startGuarding'), 0);
 
 		register_activation_hook(__FILE__, array('GoodByeCaptcha', 'activate'));
 

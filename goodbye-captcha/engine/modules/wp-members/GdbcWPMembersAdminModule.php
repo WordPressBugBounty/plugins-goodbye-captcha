@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 {
 
@@ -42,32 +44,32 @@ final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 			self::OPTION_LOGIN_FORM_PROTECTION_ACTIVATED    => array(
 				'Id'         => 1,
 				'Value'      => NULL,
-				'LabelText'  => __('Protect Login Form', GoodByeCaptcha::PLUGIN_SLUG),
-				'DisplayText' => __('Login', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'  => __('Protect Login Form', 'goodbye-captcha'),
+				'DisplayText' => __('Login', 'goodbye-captcha'),
 				'InputType'  => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
 			self::OPTION_REGISTER_FORM_PROTECTION_ACTIVATED  => array(
 				'Id'         => 2,
 				'Value'      => NULL,
-				'LabelText'  => __('Protect Registration Form', GoodByeCaptcha::PLUGIN_SLUG),
-				'DisplayText' => __('Registration', GoodByeCaptcha::PLUGIN_SLUG),
+				'LabelText'  => __('Protect Registration Form', 'goodbye-captcha'),
+				'DisplayText' => __('Registration', 'goodbye-captcha'),
 				'InputType'  => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 			),
 
 //			self::OPTION_LOST_PASS_FORM_PROTECTION_ACTIVATED  => array(
 //				'Id'         => 3,
 //				'Value'      => NULL,
-//				'LabelText'  => __('Protect Lost Password Form', GoodByeCaptcha::PLUGIN_SLUG),
-//				'DisplayText' => __('LostPassword', GoodByeCaptcha::PLUGIN_SLUG),
+//				'LabelText'  => __('Protect Lost Password Form', 'goodbye-captcha'),
+//				'DisplayText' => __('LostPassword', 'goodbye-captcha'),
 //				'InputType'  => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 //			),
 //
 //			self::OPTION_CHANGE_PASS_FORM_PROTECTION_ACTIVATED  => array(
 //				'Id'         => 4,
 //				'Value'      => NULL,
-//				'LabelText'  => __('Protect Change Password Form', GoodByeCaptcha::PLUGIN_SLUG),
-//				'DisplayText' => __('ChangePassword', GoodByeCaptcha::PLUGIN_SLUG),
+//				'LabelText'  => __('Protect Change Password Form', 'goodbye-captcha'),
+//				'DisplayText' => __('ChangePassword', 'goodbye-captcha'),
 //				'InputType'  => MchGdbcHtmlUtils::FORM_ELEMENT_INPUT_CHECKBOX
 //			),
 
@@ -77,15 +79,10 @@ final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 
 	}
 
-	public  function validateModuleSettingsFields($arrSettingOptions)
-	{
-		$this->registerSuccessMessage(__('Your changes were successfully saved!', GoodByeCaptcha::PLUGIN_SLUG));
-		return $arrSettingOptions;
-	}
 
 	public  function renderModuleSettingsSectionHeader(array $arrSectionInfo)
 	{
-		echo '<h3>' . __('WP Members General Settings', GoodByeCaptcha::PLUGIN_SLUG) . '</h3><hr />';
+		echo '<h3>' . esc_html__('WP Members General Settings', 'goodbye-captcha') . '</h3><hr />';
 	}
 
 	public static function getInstance()
@@ -98,7 +95,7 @@ final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 	{
 		$optionName = $this->getOptionDisplayTextByOptionId($attemptEntity->SectionId);
 
-		$attemptEntity->Notes = (array)maybe_unserialize($attemptEntity->Notes);
+		$attemptEntity->Notes = (array)GoodByeCaptchaUtils::safeMaybeUnserialize($attemptEntity->Notes);
 
 		$arrContent = array('table-head-rows' => '', 'table-body-rows' => '');
 
@@ -109,12 +106,13 @@ final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 		$tableBodyRows = '';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th colspan="2">' . sprintf(__("WPMembers Blocked %s Attempt", GoodByeCaptcha::PLUGIN_SLUG), $optionName) . '</th>';
+		/* translators: %s: name of the WP-Members form the attempt was blocked on. */
+		$tableHeadRows .= '<th colspan="2">' . sprintf(__("WPMembers Blocked %s Attempt", 'goodbye-captcha'), $optionName) . '</th>';
 		$tableHeadRows .= '</tr>';
 
 		$tableHeadRows .= '<tr>';
-		$tableHeadRows .= '<th>' . __('Field', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
-		$tableHeadRows .= '<th>' . __('Value', GoodByeCaptcha::PLUGIN_SLUG) . '</th>';
+		$tableHeadRows .= '<th>' . __('Field', 'goodbye-captcha') . '</th>';
+		$tableHeadRows .= '<th>' . __('Value', 'goodbye-captcha') . '</th>';
 		$tableHeadRows .= '</tr>';
 
 
@@ -122,7 +120,7 @@ final class GdbcWPMembersAdminModule extends GdbcBaseAdminModule
 		{
 			$tableBodyRows .='<tr>';
 			$tableBodyRows .= '<td>' . self::getBlockedContentDisplayableKey($key) . '</td>';
-			$tableBodyRows .= '<td>' . wp_filter_kses(print_r($value, true))  . '</td>';
+			$tableBodyRows .= '<td>' . self::getEscapedBlockedContentValue($key, $value)  . '</td>';
 			$tableBodyRows .='</tr>';
 		}
 

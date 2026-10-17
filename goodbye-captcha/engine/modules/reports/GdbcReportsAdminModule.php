@@ -18,6 +18,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// Every AJAX entry point in this class begins with
+// GdbcAjaxController::isAdminAjaxRequestValid(), which runs check_ajax_referer()
+// against the plugin nonce and requires an administrator session. PHPCS cannot
+// follow that helper, so it reports the $_POST reads as unverified.
+// phpcs:disable WordPress.Security.NonceVerification
+
 final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 {
 
@@ -89,7 +97,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		$ajaxData = array();
 		$ajaxData['TopAttemptsArrayPerModule'] = $attemptsPerModulesList;
 
-		echo json_encode($ajaxData);
+		echo wp_json_encode($ajaxData);
 
 		exit;
 	}
@@ -101,7 +109,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			exit;
 
 		$attemptsPerPage = 10;
-		$pageNumber = !empty($_POST['pageNumber']) ? (int) sanitize_text_field($_POST['pageNumber']) : 1;
+		$pageNumber = !empty($_POST['pageNumber']) ? (int) sanitize_text_field(wp_unslash($_POST['pageNumber'])) : 1;
 
 
 		$totalPages = ceil(count(GdbcDbAccessController::getAttemptsByClientIp(1, PHP_INT_MAX)) / $attemptsPerPage);
@@ -120,35 +128,39 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			$gdbcAttempt->Pages    = $totalPages;
 		}
 
-		echo json_encode($latestAttemptsByClientIp);
+		echo wp_json_encode($latestAttemptsByClientIp);
 		exit;
 
 	}
 
-	private function renderAttemptsByClientIp()
+	/**
+	 * Blocked attempts grouped by country code, for the Reports map.
+	 *
+	 * Handed to the reports script with wp_localize_script(); it used to be
+	 * printed as an inline <script> from the partial.
+	 *
+	 * @return array<string,int> country code => attempts
+	 */
+	public function getAttemptsByCountry()
 	{
-		$countryAttemptsJs = '';
-		$latestAttemptsByClientIp = GdbcDbAccessController::getAttemptsByClientIp(1, PHP_INT_MAX);
-
 		$arrCountryAttempts = array();
-		foreach($latestAttemptsByClientIp as $key => $gdbcAttempt)
+
+		foreach(GdbcDbAccessController::getAttemptsByClientIp(1, PHP_INT_MAX) as $gdbcAttempt)
 		{
-
-//			if(null === ($countryCode = GoodByeCaptchaUtils::getCountryCodeById($gdbcAttempt->CountryId)))
-//				continue;
-
-			//$gdbcAttempt->ClientIp    = MchGdbcIPUtils::ipAddressFromBinary($gdbcAttempt->ClientIp);
-
 			if(null === ($countryCode = GdbcIPUtils::getCountryCodeByIpAddress($gdbcAttempt->ClientIp)))
 				continue;
 
 			$countryCode = sanitize_text_field($countryCode);
 
-			isset($arrCountryAttempts[$countryCode]) ? $arrCountryAttempts[$countryCode] += $gdbcAttempt->Attempts
-													 : $arrCountryAttempts[$countryCode] = $gdbcAttempt->Attempts;
+			isset($arrCountryAttempts[$countryCode]) ? $arrCountryAttempts[$countryCode] += (int)$gdbcAttempt->Attempts
+													 : $arrCountryAttempts[$countryCode]  = (int)$gdbcAttempt->Attempts;
 		}
 
-		$countryAttemptsJs = json_encode($arrCountryAttempts);
+		return $arrCountryAttempts;
+	}
+
+	private function renderAttemptsByClientIp()
+	{
 		require_once dirname(__FILE__) . '/partials/latest-attempts-locations.php';
 	}
 
@@ -160,13 +172,13 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 
 		$ajaxData = array();
 		$ajaxData['TableHeader'] =  array(
-			'CreatedDate' =>	__('Attempt Date',      GoodByeCaptcha::PLUGIN_SLUG),
-			'Site'        =>	__('Site',              GoodByeCaptcha::PLUGIN_SLUG),
-			'ModuleName'  =>	__('Module/Section',    GoodByeCaptcha::PLUGIN_SLUG),
-			'ClientIp'    =>	__('IP Address',        GoodByeCaptcha::PLUGIN_SLUG),
-			'Country'     =>	__('Country',           GoodByeCaptcha::PLUGIN_SLUG),
-			'Reason'      =>	__('Blocking Reason',   GoodByeCaptcha::PLUGIN_SLUG),
-			'Notes'       =>	__('Blocked Content',   GoodByeCaptcha::PLUGIN_SLUG)
+			'CreatedDate' =>	__('Attempt Date', 'goodbye-captcha'),
+			'Site'        =>	__('Site', 'goodbye-captcha'),
+			'ModuleName'  =>	__('Module/Section', 'goodbye-captcha'),
+			'ClientIp'    =>	__('IP Address', 'goodbye-captcha'),
+			'Country'     =>	__('Country', 'goodbye-captcha'),
+			'Reason'      =>	__('Blocking Reason', 'goodbye-captcha'),
+			'Notes'       =>	__('Blocked Content', 'goodbye-captcha')
 		);
 
 		if( !self::$isGdbcNetworkActivated )
@@ -187,7 +199,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 				continue;
 			}
 
-			$attempt->CreatedDate = get_date_from_gmt ( date( 'Y-m-d H:i:s', $attempt->CreatedDate ), 'M d, Y H:i:s');
+			$attempt->CreatedDate = get_date_from_gmt ( gmdate( 'Y-m-d H:i:s', $attempt->CreatedDate ), 'M d, Y H:i:s');
 
 			$sectionName = GdbcModulesController::getModuleOptionDisplayText($attempt->ModuleId, $attempt->SectionId);
 			$attempt->ModuleName .= empty($sectionName) ? '' : '/' . $sectionName;
@@ -205,13 +217,13 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			}
 			else
 			{
-				$attempt->Notes = '<button data-toggle="modal" data-target="#gdbc-modal-holder" data-attempt="'. esc_attr($attempt->Id) .'"  class="btn btn-xs btn-primary">' . __('View Blocked Content', GoodByeCaptcha::PLUGIN_SLUG) . '</button>';
+				$attempt->Notes = '<button data-toggle="modal" data-target="#gdbc-modal-holder" data-attempt="'. esc_attr($attempt->Id) .'"  class="btn btn-xs btn-primary">' . __('View Blocked Content', 'goodbye-captcha') . '</button>';
 			}
 
 			if( self::$isGdbcNetworkActivated )
 			{
 				$attempt->Site = MchGdbcWpUtils::getSiteNameById($attempt->SiteId);
-				empty($attempt->Site) ? $attempt->Site = __('Unknown', GoodByeCaptcha::PLUGIN_SLUG) : null;
+				empty($attempt->Site) ? $attempt->Site = __('Unknown', 'goodbye-captcha') : null;
 			}
 			else
 			{
@@ -236,7 +248,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		$currentBlogTime = MchGdbcHttpRequest::getServerRequestTime();
 		for ($i = 1 ; $i <= self::$statsNumberOfDays; ++$i)
 		{
-			$arrPreparedData[get_date_from_gmt ( date( 'Y-m-d H:i:s', $currentBlogTime ), 'Y-m-d' )] = 0;
+			$arrPreparedData[get_date_from_gmt ( gmdate( 'Y-m-d H:i:s', $currentBlogTime ), 'Y-m-d' )] = 0;
 			$currentBlogTime -= 24 * 3600;
 		}
 
@@ -253,7 +265,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			unset($arrPreparedData[$day]);
 		}
 
-		echo json_encode(array('ChartDataArray' => $arrPreparedData));
+		echo wp_json_encode(array('ChartDataArray' => $arrPreparedData));
 		exit;
 	}
 
@@ -295,7 +307,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		$ajaxData['ModulesDescriptionArray'] = $arrModules;
 		$ajaxData['ModulesAttemptsArray'] = $displayableAttemptsArray;
 
-		echo json_encode($ajaxData);
+		echo wp_json_encode($ajaxData);
 
 		exit;
 	}
@@ -319,7 +331,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		{
 			$newArray = array();
 			for ($i = 0 ; $i <= $numberOfDays ; ++$i) {
-				$day = date('Y-m-d', $startDate + $i * 24 * 60 * 60);
+				$day = gmdate('Y-m-d', $startDate + $i * 24 * 60 * 60);
 				$newArray[$day] = 0;
 				if (isset($value[$day]))
 					$newArray[$day] += $value[$day];
@@ -347,12 +359,10 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		if( ! GdbcAjaxController::isAdminAjaxRequestValid() || !isset($_POST['moduleId']) || !is_numeric($_POST['moduleId']))
 			exit;
 
-		$_POST['moduleId']   = sanitize_text_field($_POST['moduleId']);
-		$_POST['pageNumber'] = sanitize_text_field($_POST['pageNumber']);
-		$_POST['orderBy']    = sanitize_text_field($_POST['orderBy']);
-
-		$moduleId   = $_POST['moduleId'];
-		$pageNumber = !empty($_POST['pageNumber']) ? (int)$_POST['pageNumber'] : 1;
+		$moduleId   = sanitize_text_field(wp_unslash($_POST['moduleId']));
+		$orderBy    = isset($orderBy)    ? sanitize_text_field(wp_unslash($orderBy))    : '';
+		$pageNumber = isset($_POST['pageNumber']) ? (int) sanitize_text_field(wp_unslash($_POST['pageNumber'])) : 1;
+		$pageNumber < 1 ? $pageNumber = 1 : null;
 
 
 		$recordsNumber = GdbcDbAccessController::getNumberOfAttemptsByModuleId($moduleId);
@@ -375,18 +385,18 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		if (!isset($arrModuleData[0]) || null === $moduleInstance)
 		{
 			$ajaxData['PaginationInfo']   = 0;
-			echo json_encode($ajaxData);
+			echo wp_json_encode($ajaxData);
 			exit;
 		}
 
 		$ajaxData['ModuleDataHeader'] =  array(
-			'Section'     =>	__('Section', GoodByeCaptcha::PLUGIN_SLUG),
-			'CreatedDate' =>	__('Attempt Date',  GoodByeCaptcha::PLUGIN_SLUG),
-			'Site'        =>	__('Site',  GoodByeCaptcha::PLUGIN_SLUG),
-			'ClientIp'    =>	__('IP Address',        GoodByeCaptcha::PLUGIN_SLUG),
-			'Country'     =>	__('Country',          GoodByeCaptcha::PLUGIN_SLUG),
-			'Reason'      =>	__('Blocking Reason',           GoodByeCaptcha::PLUGIN_SLUG),
-			'Notes'       =>	__('Blocked Content',          GoodByeCaptcha::PLUGIN_SLUG)
+			'Section'     =>	__('Section', 'goodbye-captcha'),
+			'CreatedDate' =>	__('Attempt Date', 'goodbye-captcha'),
+			'Site'        =>	__('Site', 'goodbye-captcha'),
+			'ClientIp'    =>	__('IP Address', 'goodbye-captcha'),
+			'Country'     =>	__('Country', 'goodbye-captcha'),
+			'Reason'      =>	__('Blocking Reason', 'goodbye-captcha'),
+			'Notes'       =>	__('Blocked Content', 'goodbye-captcha')
 		);
 
 
@@ -416,7 +426,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 				empty($attempt->Section) ? $attempt->Section = 'N\A' : null;
 			}
 
-			$attempt->CreatedDate = get_date_from_gmt ( date( 'Y-m-d H:i:s', $attempt->CreatedDate ), 'M d, Y H:i:s');
+			$attempt->CreatedDate = get_date_from_gmt ( gmdate( 'Y-m-d H:i:s', $attempt->CreatedDate ), 'M d, Y H:i:s');
 			//$sectionName = GdbcModulesController::getModuleOptionDisplayText($attempt->ModuleId, (int)$attempt->SectionId);
 			//$attempt->ModuleName .=  '/' . (empty($sectionName) ? 'N/A' : $sectionName);
 
@@ -435,13 +445,13 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			}
 			else
 			{
-				$attempt->Notes = '<button data-toggle="modal" data-target="#gdbc-modal-holder" data-attempt="'. esc_attr($attempt->Id) .'"  class="btn btn-xs btn-primary">' . __('View Blocked Content', GoodByeCaptcha::PLUGIN_SLUG) . '</button>';
+				$attempt->Notes = '<button data-toggle="modal" data-target="#gdbc-modal-holder" data-attempt="'. esc_attr($attempt->Id) .'"  class="btn btn-xs btn-primary">' . __('View Blocked Content', 'goodbye-captcha') . '</button>';
 			}
 
 			if( self::$isGdbcNetworkActivated )
 			{
 				$attempt->Site = MchGdbcWpUtils::getSiteNameById($attempt->SiteId);
-				empty($attempt->Site) ? $attempt->Site = __('Unknown', GoodByeCaptcha::PLUGIN_SLUG) : null;
+				empty($attempt->Site) ? $attempt->Site = __('Unknown', 'goodbye-captcha') : null;
 			}
 			else
 			{
@@ -453,7 +463,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		$ajaxData['PaginationInfo'] = array($pageNumber, $totalPages);
 		$ajaxData['ModuleDataRows'] = $arrModuleData;
 
-		echo json_encode($ajaxData);
+		echo wp_json_encode($ajaxData);
 
 		exit;
 	}
@@ -464,29 +474,33 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		if( ! GdbcAjaxController::isAdminAjaxRequestValid() || !isset($_POST['clientIp']) || !isset($_POST['shouldBlock']) || !is_numeric($_POST['shouldBlock']))
 			wp_send_json_error();
 
-		$_POST['clientIp']    = sanitize_text_field($_POST['clientIp']);
-		$_POST['shouldBlock'] = (bool)sanitize_text_field($_POST['shouldBlock']);
+		$clientIp    = sanitize_text_field(wp_unslash($_POST['clientIp']));
+		$shouldBlock = (bool) sanitize_text_field(wp_unslash($_POST['shouldBlock']));
 
-		if($_POST['shouldBlock'] && GdbcIPUtils::isIpWhiteListed($_POST['clientIp'])){
-			wp_send_json_error(sprintf(__("Ip Address %s is White-Listed and cannot be blocked !", GoodByeCaptcha::PLUGIN_SLUG), $_POST['clientIp']));
+		if($shouldBlock && GdbcIPUtils::isIpWhiteListed($clientIp)){
+			/* translators: %s: the IP address the administrator tried to block. */
+			wp_send_json_error(sprintf(__("Ip Address %s is White-Listed and cannot be blocked !", 'goodbye-captcha'), $clientIp));
 		}
 
-		if($_POST['shouldBlock'])
+		if($shouldBlock)
 		{
-			if(GdbcIPUtils::isIpAddressBlocked($_POST['clientIp'])) {
-				wp_send_json_error(sprintf(__('Ip Address %s is already blocked !', GoodByeCaptcha::PLUGIN_SLUG), $_POST['clientIp']));
+			if(GdbcIPUtils::isIpAddressBlocked($clientIp)) {
+				/* translators: %s: the IP address the administrator tried to block. */
+				wp_send_json_error(sprintf(__('Ip Address %s is already blocked !', 'goodbye-captcha'), $clientIp));
 			}
 
-			GdbcBlackListedIpsAdminModule::getInstance()->registerBlackListedIp($_POST['clientIp']);
+			GdbcBlackListedIpsAdminModule::getInstance()->registerBlackListedIp($clientIp);
 
-			if(GdbcIPUtils::isIpAddressBlocked($_POST['clientIp'])) {
-				wp_send_json_success(sprintf(__('Ip Address %s was successfully Black-Listed !', GoodByeCaptcha::PLUGIN_SLUG), $_POST['clientIp']));
+			if(GdbcIPUtils::isIpAddressBlocked($clientIp)) {
+				/* translators: %s: the IP address that was black-listed. */
+				wp_send_json_success(sprintf(__('Ip Address %s was successfully Black-Listed !', 'goodbye-captcha'), $clientIp));
 			}
 		}
 		else
 		{
-			GdbcBlackListedIpsAdminModule::getInstance()->unRegisterBlackListedIp($_POST['clientIp']);
-			wp_send_json_success(sprintf(__('Ip Address %s was successfully removed from Black Listed IPs!', GoodByeCaptcha::PLUGIN_SLUG), $_POST['clientIp']));
+			GdbcBlackListedIpsAdminModule::getInstance()->unRegisterBlackListedIp($clientIp);
+			/* translators: %s: the IP address that was removed from the black list. */
+			wp_send_json_success(sprintf(__('Ip Address %s was successfully removed from Black Listed IPs!', 'goodbye-captcha'), $clientIp));
 		}
 
 		exit;
@@ -502,7 +516,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 
 
 		if (empty($countryCode) || empty($countryName))
-			return __('Unknown', GoodByeCaptcha::PLUGIN_SLUG);
+			return __('Unknown', 'goodbye-captcha');
 
 		$countryHtmlCode = '<img width="16px" height="11px" title="' . esc_attr($countryName) . '" src="' . plugins_url('/assets/admin/images/flags/' . strtolower($countryCode) . '.gif', GoodByeCaptcha::getMainFilePath()) . '"/>';
 		$countryHtmlCode .= '<span>' . esc_html($countryName) . '</span>';
@@ -543,7 +557,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 			(++$counter % 2 !== 0) ? array_push($arrAjaxData, $arrFormattedAttempt) : array_unshift($arrAjaxData, $arrFormattedAttempt);
 		}
 
-		echo json_encode($arrAjaxData);
+		echo wp_json_encode($arrAjaxData);
 		exit;
 	}
 
@@ -552,9 +566,6 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		return array();
 	}
 
-	public function validateModuleSettingsFields( $arrOptions ) {
-		return $arrOptions;
-	}
 
 	public static function getInstance()
 	{
@@ -568,7 +579,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 		if(null === $moduleInstance || empty($attemptEntity->Notes))
 			return array();
 
-		$attemptEntity->Notes = maybe_unserialize($attemptEntity->Notes);
+		$attemptEntity->Notes = GoodByeCaptchaUtils::safeMaybeUnserialize($attemptEntity->Notes);
 		return $moduleInstance->getFormattedBlockedContent($attemptEntity);
 	}
 
@@ -590,7 +601,7 @@ final class GdbcReportsAdminModule extends GdbcBaseAdminModule
 
 		$formattedHtmlCode = str_replace(array('{table-head-rows}', '{table-body-rows}'), array($arrFormattedSavedContent['table-head-rows'], $arrFormattedSavedContent['table-body-rows']), $formattedHtmlCode);
 
-		echo $formattedHtmlCode;
+		echo wp_kses_post($formattedHtmlCode);
 
 		exit;
 	}

@@ -18,6 +18,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// This controller inspects submissions to public forms (comments, login,
+// registration) to decide whether they came from a bot. Those forms are not the
+// plugin's own and carry no plugin nonce, so reading $_POST without one is the
+// whole point of the check. Values are validated before use.
+// The token fields below are unslashed and then compared byte-for-byte against
+// the value this plugin issued; a sanitiser would alter the bytes and break the
+// check. Everything else read here is validated by getSubmittedBrowserInfo().
+// phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+
 final class GdbcRequestController
 {
 
@@ -120,7 +131,7 @@ final class GdbcRequestController
 			return false;
 		}
 
-		$receivedToken = isset($_POST[$hiddenInputName]) ? $_POST[$hiddenInputName] : null;
+		$receivedToken = (isset($_POST[$hiddenInputName]) && is_string($_POST[$hiddenInputName])) ? wp_unslash($_POST[$hiddenInputName]) : null;
 
 		if(null === $receivedToken){
 			self::$rejectReasonCode = self::REJECT_REASON_TOKEN_MISSING;
@@ -143,7 +154,7 @@ final class GdbcRequestController
 
 		self::$browserInfoInputName = substr($arrDecryptedToken[0], 0, $tokenIndex);
 
-		$receivedBrowserInfoInput = isset($_POST[self::$browserInfoInputName]) ? $_POST[self::$browserInfoInputName] : null;
+		$receivedBrowserInfoInput = (isset($_POST[self::$browserInfoInputName]) && is_string($_POST[self::$browserInfoInputName])) ? wp_unslash($_POST[self::$browserInfoInputName]) : null;
 
 		if( null === $receivedBrowserInfoInput )
 		{
@@ -193,27 +204,65 @@ final class GdbcRequestController
 	}
 
 
-	public static function getEncryptedToken()
+	/**
+	 * The browser fingerprint the client posted, decoded and validated.
+	 *
+	 * json_decode() does not sanitise, so every key and value is checked against a
+	 * strict shape and anything else is dropped. Values are validated rather than
+	 * transformed on purpose: the browser later re-sends the same values
+	 * byte-for-byte to prove the token is its own, so altering them here would make
+	 * every legitimate visitor fail that comparison.
+	 *
+	 * @return array<string, bool|int|float|string>
+	 */
+	private static function getSubmittedBrowserInfo()
 	{
-		if( ! isset($_POST['browserInfo']) || null === ($arrBrowserInfo = json_decode(stripcslashes($_POST['browserInfo']), true)))
+		if(!isset($_POST['browserInfo']) || !is_string($_POST['browserInfo']))
 			return array();
 
-		foreach ((array)$arrBrowserInfo as $prop => $propValue)
+		$rawJson = wp_unslash($_POST['browserInfo']);
+		if(!isset($rawJson[1]) || isset($rawJson[4096])) // a fingerprint is a few hundred bytes
+			return array();
+
+		$arrDecoded = json_decode($rawJson, true);
+		if(!is_array($arrDecoded))
+			return array();
+
+		$arrBrowserInfo = array();
+		foreach($arrDecoded as $key => $value)
 		{
-			if(!is_array($propValue) && false === strpos($prop, ' '))
+			if(!is_string($key) || !preg_match('/^[A-Za-z0-9_+\-]{1,64}$/', $key))
 				continue;
 
-			unset($arrBrowserInfo[$prop]);
+			if(is_bool($value) || is_int($value) || is_float($value)) {
+				$arrBrowserInfo[$key] = $value;
+			}
+			elseif(is_string($value) && preg_match('/^[A-Za-z0-9_.+\- ]{0,128}$/', $value)) {
+				$arrBrowserInfo[$key] = $value;
+			}
+			// arrays, objects and anything with other characters are rejected
 		}
+
+		return $arrBrowserInfo;
+	}
+
+	public static function getEncryptedToken()
+	{
+		$arrBrowserInfo = self::getSubmittedBrowserInfo();
+		if(empty($arrBrowserInfo))
+			return array();
 
 		if( ($arrBrowserInfoLength = count($arrBrowserInfo)) < 3)
 			return array();
 
-		$arrKeysToSave = array_flip((array)array_rand($arrBrowserInfo, mt_rand(3, $arrBrowserInfoLength - 1)));
+		$arrKeysToSave = array_flip((array)array_rand($arrBrowserInfo, wp_rand(3, $arrBrowserInfoLength - 1)));
 
 		foreach ($arrKeysToSave as $key => &$val)
 		{
-			$val = var_export($arrBrowserInfo[$key], true);
+			// Not debug output: var_export() is used here purely to serialise the
+			// browser-info value into the string that becomes part of the encrypted
+			// token. Changing the representation would invalidate issued tokens.
+			$val = var_export($arrBrowserInfo[$key], true); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		}
 
 		$arrTokenData = self::getTokenData();
@@ -222,7 +271,7 @@ final class GdbcRequestController
 		array_unshift($arrTokenData, $browserField . self::TOKEN_SEPARATOR . MchGdbcUtils::replaceNonAlphaNumericCharacters(implode('', array_values($arrKeysToSave)), ''));
 
 		return array(
-			'token'       => MchCrypt::encryptToken(GdbcSettingsPublicModule::getInstance()->getOption(GdbcSettingsAdminModule::OPTION_TOKEN_SECRET_KEY), json_encode($arrTokenData)),
+			'token'       => MchCrypt::encryptToken(GdbcSettingsPublicModule::getInstance()->getOption(GdbcSettingsAdminModule::OPTION_TOKEN_SECRET_KEY), wp_json_encode($arrTokenData)),
 			$browserField => implode(self::TOKEN_SEPARATOR, array_keys($arrKeysToSave))
 		);
 
@@ -258,25 +307,25 @@ final class GdbcRequestController
 		{
 			$arrReasonDescription =  array(
 
-				self::REJECT_REASON_TOKEN_INVALID           => __('Invalid Token',          GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_TOKEN_MISSING           => __('Token Not Submitted',    GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_TOKEN_EXPIRED           => __('Token Expired',          GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_TOKEN_SUBMITTED_EARLY   => __('Token Submitted Early',  GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_CLIENT_IP_BLOCKED       => __('Client IP Blocked',      GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_BROWSER_INFO_MISSING    => __('Browser Info Missing',   GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_BROWSER_INFO_INVALID    => __('Browser Info Invalid',   GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_CLIENT_IP_UNDETECTABLE  => __('Undetectable Client IP', GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_USER_ENUMERATION        => __('User Enumeration',       GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_PROXY_ANONYMIZER        => __('Proxy Anonymizer',       GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_WEB_ATTACKER            => __('Web Attacker',           GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_SERVICE_UNAVAILABLE     => __('Service Unavailable',    GoodByeCaptcha::PLUGIN_SLUG),
-				//self::REJECT_REASON_LINK_NOTIFICATION     => __('Link Notification',      GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_COMMENT_FIELD_TOO_LONG  => __('Comment Field Too Long', GoodByeCaptcha::PLUGIN_SLUG),
-				self::REJECT_REASON_COUNTRY_IP_BLOCKED      => __('Blocked Country',        GoodByeCaptcha::PLUGIN_SLUG),
+				self::REJECT_REASON_TOKEN_INVALID           => __('Invalid Token', 'goodbye-captcha'),
+				self::REJECT_REASON_TOKEN_MISSING           => __('Token Not Submitted', 'goodbye-captcha'),
+				self::REJECT_REASON_TOKEN_EXPIRED           => __('Token Expired', 'goodbye-captcha'),
+				self::REJECT_REASON_TOKEN_SUBMITTED_EARLY   => __('Token Submitted Early', 'goodbye-captcha'),
+				self::REJECT_REASON_CLIENT_IP_BLOCKED       => __('Client IP Blocked', 'goodbye-captcha'),
+				self::REJECT_REASON_BROWSER_INFO_MISSING    => __('Browser Info Missing', 'goodbye-captcha'),
+				self::REJECT_REASON_BROWSER_INFO_INVALID    => __('Browser Info Invalid', 'goodbye-captcha'),
+				self::REJECT_REASON_CLIENT_IP_UNDETECTABLE  => __('Undetectable Client IP', 'goodbye-captcha'),
+				self::REJECT_REASON_USER_ENUMERATION        => __('User Enumeration', 'goodbye-captcha'),
+				self::REJECT_REASON_PROXY_ANONYMIZER        => __('Proxy Anonymizer', 'goodbye-captcha'),
+				self::REJECT_REASON_WEB_ATTACKER            => __('Web Attacker', 'goodbye-captcha'),
+				self::REJECT_REASON_SERVICE_UNAVAILABLE     => __('Service Unavailable', 'goodbye-captcha'),
+				//self::REJECT_REASON_LINK_NOTIFICATION     => __('Link Notification', 'goodbye-captcha'),
+				self::REJECT_REASON_COMMENT_FIELD_TOO_LONG  => __('Comment Field Too Long', 'goodbye-captcha'),
+				self::REJECT_REASON_COUNTRY_IP_BLOCKED      => __('Blocked Country', 'goodbye-captcha'),
 			);
 		}
 
-		return isset($arrReasonDescription[$reasonId]) ? $arrReasonDescription[$reasonId] : __('Unknown', GoodByeCaptcha::PLUGIN_SLUG);
+		return isset($arrReasonDescription[$reasonId]) ? $arrReasonDescription[$reasonId] : __('Unknown', 'goodbye-captcha');
 
 	}
 
@@ -288,7 +337,7 @@ final class GdbcRequestController
 
 	public static function redirectToHomePage()
 	{
-		wp_redirect( home_url() ); exit;
+		wp_safe_redirect( home_url() ); exit;
 	}
 
 }

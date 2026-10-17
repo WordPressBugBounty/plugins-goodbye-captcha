@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class GdbcMembershipAdminPage extends GdbcBaseAdminPage
 {
 	public function __construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug)
@@ -24,9 +26,6 @@ class GdbcMembershipAdminPage extends GdbcBaseAdminPage
 		parent::__construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug);
 
 		$arrModules  = array();
-		
-		if(GdbcModulesController::isModuleRegistered(GdbcModulesController::MODULE_ULTRA_COMMUNITY))
-			$arrModules[] =  GdbcUltraCommunityAdminModule::getInstance();
 		
 		
 		if(GdbcModulesController::isModuleRegistered(GdbcModulesController::MODULE_WP_MEMBERS))
@@ -49,7 +48,7 @@ class GdbcMembershipAdminPage extends GdbcBaseAdminPage
 			$arrModules[] =  GdbcUltimateMemberAdminModule::getInstance();
 
 		$this->registerGroupedModules(array(
-				new MchGdbcGroupedModules(__('WPBruiser - Membership Plugins Settings', GoodByeCaptcha::PLUGIN_SLUG), $arrModules)
+				new MchGdbcGroupedModules(__('WPBruiser - Membership Plugins Settings', 'goodbye-captcha'), $arrModules)
 			)
 		);
 

@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class GdbcNotificationsAdminPage extends GdbcBaseAdminPage
 {
 	public function __construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug)
@@ -30,7 +32,7 @@ class GdbcNotificationsAdminPage extends GdbcBaseAdminPage
 			$modulesList[] = GdbcEmailNotificationsAdminModule::getInstance();
 
 		$this->registerGroupedModules(array(
-				new MchGdbcGroupedModules(__('WPBruiser - Notifications Settings', GoodByeCaptcha::PLUGIN_SLUG), $modulesList)
+				new MchGdbcGroupedModules(__('WPBruiser - Notifications Settings', 'goodbye-captcha'), $modulesList)
 			)
 		);
 

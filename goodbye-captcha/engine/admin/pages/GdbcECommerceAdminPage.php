@@ -16,6 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
+defined( 'ABSPATH' ) || exit;
 class GdbcECommerceAdminPage  extends GdbcBaseAdminPage
 {
 	public function __construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug)
@@ -33,7 +35,7 @@ class GdbcECommerceAdminPage  extends GdbcBaseAdminPage
 			$modulesList[] = GdbcAffiliateWPAdminModule::getInstance();
 
 		$this->registerGroupedModules(array(
-				new MchGdbcGroupedModules(__('WPBruiser - eCommerce Plugins Settings', GoodByeCaptcha::PLUGIN_SLUG), $modulesList)
+				new MchGdbcGroupedModules(__('WPBruiser - eCommerce Plugins Settings', 'goodbye-captcha'), $modulesList)
 			)
 		);
 		

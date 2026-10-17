@@ -18,6 +18,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// This module inspects submissions to a third-party public form to decide whether
+// they came from a bot. Those forms carry no plugin nonce, so reading $_POST
+// without one is intentional; values are validated before use.
+// phpcs:disable WordPress.Security.NonceVerification
+
 final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 {
 
@@ -46,19 +53,9 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 		add_action('um_submit_form_errors_hook_login', array($this, 'validateFormEncryptedToken'), 1);
 		add_action('um_after_login_fields', array($this, 'renderHiddenFieldIntoForm'));
 
-		if(MchGdbcWpUtils::isAjaxRequest()){
-			add_action('um_after_form', array($this, 'renderRefreshTokensScript'), 10, 1);
-		}
 
 	}
 
-	public function renderRefreshTokensScript($arrRequestInfo)
-	{
-		if((empty($arrRequestInfo['mode'])  ||  'login' !== $arrRequestInfo['mode']))
-			return;
-
-		echo GdbcBasePublicModule::getRefreshTokensScriptFileContent(true);
-	}
 
 	public function registerRegistrationHooks()
 	{
@@ -74,7 +71,10 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 
 	public function renderHiddenFieldIntoForm()
 	{
-		echo $this->getTokenFieldHtml();
+		echo wp_kses($this->getTokenFieldHtml(), array('input' => array(
+			'type' => array(), 'name' => array(), 'value' => array(),
+			'autocomplete' => array(), 'autocorrect' => array(),
+		)));
 	}
 
 	public function validateFormEncryptedToken($arrRequestInfo)
@@ -92,7 +92,7 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 
 		if(null === $umSection)
 		{
-			wp_redirect(esc_url(add_query_arg('err', '1')));
+			wp_safe_redirect(esc_url(add_query_arg('err', '1')));
 			exit;
 		}
 
@@ -101,7 +101,9 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 		$arrSubmittedData = array();
 		if(!empty($arrRequestInfo['custom_fields']) && is_serialized($arrRequestInfo['custom_fields']))
 		{
-			$arrFields = (array)maybe_unserialize($arrRequestInfo['custom_fields']);
+			// SECURITY: custom_fields is unauthenticated, attacker-controlled POST data.
+			// Never rebuild PHP objects from it (CVE-2026-65556 PHP Object Injection).
+			$arrFields = (array)GoodByeCaptchaUtils::safeMaybeUnserialize($arrRequestInfo['custom_fields']);
 			unset($arrRequestInfo['custom_fields']);
 
 			foreach((array)$arrRequestInfo as $formFieldName => $value)
@@ -117,9 +119,9 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 
 		if(isset($_POST['username_b']) && $umSection === GdbcUltimateMemberAdminModule::OPTION_ULTIMATE_MEMBER_LOST_PASSWORD_FORM)
 		{
-			is_email($_POST['username_b']) ?
-				$arrSubmittedData['email'] = sanitize_email($_POST['username_b']) :
-				$arrSubmittedData['username'] = sanitize_user($_POST['username_b']);
+			is_email(sanitize_text_field(wp_unslash($_POST['username_b']))) ?
+				$arrSubmittedData['email'] = sanitize_email(wp_unslash($_POST['username_b'])) :
+				$arrSubmittedData['username'] = sanitize_user(wp_unslash($_POST['username_b']));
 		}
 
 		$this->getAttemptEntity()->Notes = $arrSubmittedData;
@@ -127,7 +129,7 @@ final class GdbcUltimateMemberPublicModule extends GdbcBasePublicModule
 		if(GdbcRequestController::isValid($this->attemptEntity))
 			return;
 
-		wp_redirect(esc_url(add_query_arg('err', '1')));
+		wp_safe_redirect(esc_url(add_query_arg('err', '1')));
 		exit;
 	}
 

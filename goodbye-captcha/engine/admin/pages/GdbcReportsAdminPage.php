@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
 class GdbcReportsAdminPage extends GdbcBaseAdminPage
 {
 	public function __construct($pageMenuTitle, $pageBrowserTitle, $pluginSlug)
@@ -29,7 +31,7 @@ class GdbcReportsAdminPage extends GdbcBaseAdminPage
 			return;
 
 		$this->registerGroupedModules(array(
-				new MchGdbcGroupedModules(__('WPBruiser - Blocked Attempts', GoodByeCaptcha::PLUGIN_SLUG), array(GdbcReportsAdminModule::getInstance()))
+				new MchGdbcGroupedModules(__('WPBruiser - Blocked Attempts', 'goodbye-captcha'), array(GdbcReportsAdminModule::getInstance()))
 			)
 		);
 
@@ -50,8 +52,9 @@ class GdbcReportsAdminPage extends GdbcBaseAdminPage
 		$arrQueryString['gdbc-detailed-report'] = 1;
 		$arrReportsNavigationTabUrl[] = esc_url(add_query_arg($arrQueryString, $pageAdminUrl));
 
+		// No heading here: renderPluginActiveAdminPage() prints the page title as
+		// the <h1>, and this page's browser title is already the same string.
 		echo '<div id = "gdbc-reports-holder" class = "clearfix">';
-		echo '<h3>' . __('WPBruiser - Blocked Attempts', GoodByeCaptcha::PLUGIN_SLUG) . '</h3>';
 
 		GdbcReportsAdminModule::getInstance()->renderReportsMainPageContent($arrReportsNavigationTabUrl);
 

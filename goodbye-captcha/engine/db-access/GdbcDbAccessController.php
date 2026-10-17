@@ -17,6 +17,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+defined( 'ABSPATH' ) || exit;
+
+// This class is the data layer for the plugin's own custom table. Table names are
+// built from $wpdb->base_prefix (never from user input) and cannot be passed as
+// prepare() placeholders; every query with parameters is run through
+// $wpdb->prepare() before it reaches executePreparedQuery(). Results are not
+// cached because the reports must reflect live data.
+// phpcs:disable WordPress.DB, PluginCheck.Security.DirectDB
+
 final class GdbcDbAccessController
 {
 	public static $LAST_INSERTED_ATTEMPT_ID = 0;
@@ -52,7 +61,22 @@ final class GdbcDbAccessController
 			$tokenFieldName   = GdbcSettingsPublicModule::getInstance()->getOption(GdbcSettingsAdminModule::OPTION_HIDDEN_INPUT_NAME);
 			$browserInputName = GdbcRequestController::getPostedBrowserInfoInputName();
 
-			$arrKeysToUnset = array($tokenFieldName, $browserInputName, strtolower($tokenFieldName), strtolower($browserInputName), strtoupper($tokenFieldName), strtoupper($browserInputName), '_wpnonce');
+			// Either name can be null - $browserInputName in particular is null whenever
+			// the request carried no token at all, which is the common case for a blocked
+			// bot - and passing null to strtolower()/strtoupper() is deprecated on PHP 8.1+.
+			$arrFieldNames = array();
+			foreach (array($tokenFieldName, $browserInputName) as $fieldName)
+			{
+				if (is_string($fieldName) && '' !== $fieldName)
+					$arrFieldNames[] = $fieldName;
+			}
+
+			$arrKeysToUnset = array_merge(
+				$arrFieldNames,
+				array_map('strtolower', $arrFieldNames),
+				array_map('strtoupper', $arrFieldNames),
+				array('_wpnonce')
+			);
 			foreach($arrKeysToUnset as $keyName)
 			{
 				unset($attemptEntity->Notes[$keyName]);
