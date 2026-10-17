@@ -172,6 +172,41 @@
                 options.data = window.jQuery.param(window.jQuery.extend(originalOptions.data || {}, tokens));
             });
         }
+
+        // Tell add-ons the form now carries a token. Forms that are not submitted as
+        // HTML forms (the WooCommerce Checkout block posts JSON) forward these fields.
+        var fields = {};
+        for (var name in tokens) {
+            if (!tokens.hasOwnProperty(name)) {
+                continue;
+            }
+            var input = formElement.querySelector('input[name="' + name + '"]');
+            if (input) {
+                fields[name] = input.value;
+            }
+        }
+        var tokenEvent;
+        try {
+            tokenEvent = new CustomEvent('wpbruiser:token', { bubbles: true, detail: { fields: fields } });
+        } catch (e) {
+            tokenEvent = document.createEvent('CustomEvent');
+            tokenEvent.initCustomEvent('wpbruiser:token', true, false, { fields: fields });
+        }
+        formElement.dispatchEvent(tokenEvent);
+
+        addAdminNote(formElement);
+    }
+
+    // Administrators see a small note under every form that received a token.
+    function addAdminNote(formElement) {
+        if (!config.adminNote || formElement.hidden || formElement.querySelector('.wpbruiser-admin-note')) {
+            return;
+        }
+        var note = document.createElement('p');
+        note.className = 'wpbruiser-admin-note';
+        note.textContent = '\u2713 ' + config.adminNote;
+        note.style.cssText = 'margin:8px 0 0;font-size:12px;line-height:1.4;color:#50575e;';
+        formElement.appendChild(note);
     }
 
     function retrieveToken(formElement, isRetry) {
@@ -262,7 +297,7 @@
     }, false);
 
     window.WPBruiserClient = {
-        requestTokens: function () { requestTokens(document); }
+        requestTokens: function (root) { requestTokens(root || document); }
     };
 
 })(window, document);

@@ -1,20 +1,20 @@
-=== WPBruiser ===
+=== WPBruiser - No CAPTCHA Anti-Spam & Login Protection ===
 Contributors: wpzoom
-Tags: antispam, spam protection, brute force, login security, comments
+Tags: anti-spam, spam protection, captcha, brute force, contact form
 Requires at least: 6.5
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 3.2.1
+Stable tag: 3.3.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Stop spam bots and brute-force logins on your WordPress forms with an invisible check. No puzzles, no image challenges, no third-party service.
+Stop spam on contact forms, comments, logins and registrations with an invisible check. No CAPTCHA, no puzzles, no third-party service.
 
 == Description ==
 
-WPBruiser stops automated form submissions before WordPress ever processes them. Every protected form gets a hidden, short-lived token that is created in the visitor's browser. A real person never sees it or has to do anything. A bot that posts straight to your login, registration or comment endpoint arrives without a valid token and is turned away.
+WPBruiser stops automated form submissions before WordPress ever processes them. Every protected form gets a hidden token, which the visitor's browser requests in the background. A real person never sees it or has to do anything. A bot that posts straight to your login, registration or comment endpoint arrives without a valid token and is turned away.
 
-Because bad submissions are rejected at the door, they never land in your moderation queue, never create junk user accounts and never cost you database writes. You also don't have to ask visitors to solve a puzzle, which is often the step where real people give up on a form.
+Because bad submissions are rejected at the door, they never land in your moderation queue and never create junk user accounts. You also don't have to ask visitors to solve a puzzle, which is often the step where real people give up on a form.
 
 Everything runs on your own server. WPBruiser does not call remote APIs, does not load outside scripts or fonts and does not send your visitors' data anywhere.
 
@@ -22,22 +22,27 @@ Everything runs on your own server. WPBruiser does not call remote APIs, does no
 
 = Forms you can protect =
 
-Turn protection on or off for each form on the plugin's settings screens:
+Turn protection on or off for each form on the WordPress and Integrations screens:
 
 * WordPress login
 * WordPress registration
 * WordPress lost password
 * WordPress comments, with an optional character limit for the comment, name, email and website fields
 
-= Supported third-party plugins =
+= Free integrations =
 
-* **Ultimate Member**: login, registration and password reset forms
-* **WP-Members**: login and registration forms
-* **Login With Ajax**: its AJAX login, registration and lost password forms
-* **Jetpack**: the Jetpack contact form
-* **MailChimp for WordPress**: every sign-up form you build with it
-* **HTML Forms**: every form you build with it
-* **wpDiscuz**: comments posted through its AJAX comment system
+Each integration is a card on the **Integrations** screen, which shows whether its plugin is active on your site and has one switch to turn protection on. On a new install, protection is switched on for every supported plugin that is already active. Login With Ajax and wpDiscuz need no switch of their own: they are covered by the WordPress login and comment protection.
+
+* **[WPZOOM Forms](https://wordpress.org/plugins/wpzoom-forms/)**: every form you build with it, placed as a block, a shortcode or an Elementor widget
+* **[Ultimate Member](https://wordpress.org/plugins/ultimate-member/)**: login, registration and password reset forms
+* **[WP-Members](https://wordpress.org/plugins/wp-members/)**: login and registration forms
+* **[Login With Ajax](https://wordpress.org/plugins/login-with-ajax/)**: its AJAX login, registration and lost password forms
+* **[Jetpack](https://wordpress.org/plugins/jetpack/)**: the Jetpack contact form
+* **[MC4WP: Mailchimp for WordPress](https://wordpress.org/plugins/mailchimp-for-wp/)**: every sign-up form you build with it
+* **[HTML Forms](https://wordpress.org/plugins/html-forms/)**: every form you build with it
+* **[wpDiscuz](https://wordpress.org/plugins/wpdiscuz/)**: comments posted through its AJAX comment system
+
+Using Contact Form 7, WPForms, WooCommerce, Elementor Pro, Gravity Forms or another popular form plugin? [WPBruiser Pro](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=free-integrations) protects them too. See "WPBruiser Pro" below.
 
 = Brute-force and hardening tools =
 
@@ -59,15 +64,52 @@ Turn protection on or off for each form on the plugin's settings screens:
 
 * Every blocked attempt is logged to a database table of its own
 * Charts show which forms are attacked most, and a world map shows where attempts come from (the country lookup is done locally)
+* See the submitted content of a blocked attempt (optional, kept for the number of days you choose)
 * Block or unblock an address straight from the reports screen
+* A Dashboard widget with blocked attempts for the last day, week and month, and the forms bots target most
 * Old log entries are deleted automatically after the number of days you choose, or you can turn logging off
 
 = Everyday details =
 
+* Administrators see a small "protected" note under every form WPBruiser covers, so it is easy to check what is protected (visitors never see it)
 * Test Mode, which emails you about every check so you can confirm protection works before you rely on it
 * Network admin screens for WordPress Multisite
-* Works with full-page caching: if a cached page carries an expired token, the script fetches a fresh one when needed
+* Works with full-page caching: the token is requested fresh on every page view
 * The front-end script is a single small file, loaded deferred so it doesn't hold up page rendering
+
+= WPBruiser Pro =
+
+[WPBruiser Pro](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=pro-section) is an add-on from WPZOOM that brings the same invisible check to the form, shop and newsletter plugins most sites run on. It adds its integrations to the Integrations screen you already know, so there is nothing new to learn, and it keeps every check on your own server.
+
+**Form builders**
+
+* **[Contact Form 7](https://wordpress.org/plugins/contact-form-7/)**: blocked messages are marked as spam, so no email is sent
+* **[WPForms](https://wordpress.org/plugins/wpforms-lite/)** (Lite and Pro): blocked submissions stop before an entry is saved or a notification goes out, with or without AJAX submission
+* **[Elementor Pro](https://elementor.com/pro/) Form widget**, and the Login widget whenever login protection is on
+* **[Gravity Forms](https://www.gravityforms.com/)**: blocked entries go to the form's Spam list
+* **[Fluent Forms](https://wordpress.org/plugins/fluentform/)**, including multi-step forms
+* **[Forminator](https://wordpress.org/plugins/forminator/)** forms, with or without AJAX submission
+* **[Ninja Forms](https://wordpress.org/plugins/ninja-forms/)**
+* **[Formidable Forms](https://wordpress.org/plugins/formidable/)** (Lite and Pro), with or without AJAX submission
+
+**Shop and newsletters**
+
+* **[WooCommerce](https://wordpress.org/plugins/woocommerce/)**: login (on My Account and at checkout), registration, lost and reset password, product reviews, and account creation at checkout on both the classic checkout and the Checkout block
+* **[MailPoet](https://wordpress.org/plugins/mailpoet/)** subscription forms wherever they appear: widgets, blocks, shortcodes, pop-ups, slide-ins, fixed bars and below posts. No subscriber is created and no confirmation email is sent for a blocked sign-up.
+
+**Security**
+
+* **Country blocking**: reject submissions from the countries you choose, or accept them only from the countries you choose. Countries are looked up locally with current IP-to-country data that ships with each release, plus Cloudflare's country header on sites behind Cloudflare. Submissions from unknown countries are never rejected, and the screen warns you if your own country would be blocked.
+* **Submission rate limits**: limit how many protected forms one IP address can submit in a time window (5 every 10 minutes by default). Administrators and IP addresses on your allow list are never limited, and rejected submissions show up in Reports as "Too Many Submissions".
+
+**Also included**
+
+* Every Pro integration is switched on automatically for the plugins you already use, on first activation and after each update
+* Blocked attempts from every integration appear in the same Reports screen and Dashboard widget, with the submitted content when you keep it
+* Updates and priority support from the WPZOOM team, with a 14-day money-back guarantee
+* Protection keeps working if your license expires; only updates and support stop
+
+[Compare free and Pro, and see the plans](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=pro-plans)
 
 = External services =
 
@@ -93,9 +135,10 @@ Found a bug or have a question? Start a topic on the [WordPress.org support foru
 **First steps after activating**
 
 1. Open the new **WPBruiser** item in the admin menu.
-2. Choose which forms to protect, on the WordPress tab and on the tabs for any supported plugins you use.
-3. Optionally, turn on Test Mode, submit your forms yourself and check the notification emails. Turn Test Mode off when you're done.
-4. If your site is behind a reverse proxy or CDN that isn't detected automatically, add its header under trusted proxy headers so the correct visitor IP is logged.
+2. On the **WordPress** screen, check that the login, registration, lost password and comment forms are protected (they are on a new install).
+3. On the **Integrations** screen, switch on protection for any supported plugin you use. Integrations for plugins that are already active are switched on for you on a new install.
+4. Optionally, turn on Test Mode, submit your forms yourself and check the notification emails. Turn Test Mode off when you're done.
+5. If your site is behind a reverse proxy or CDN that isn't detected automatically, add its header under trusted proxy headers so the correct visitor IP is logged.
 
 On a Multisite network, activate the plugin network-wide and manage it from the Network Admin.
 
@@ -115,7 +158,7 @@ Turn on Test Mode in the plugin settings. While it is on, nothing is blocked. In
 
 = I use a page caching plugin. Is that a problem? =
 
-No. Cached pages can hold on to an expired token, so the script asks the server for a new one when it needs to. You don't have to exclude any pages from your cache.
+No. The script requests a fresh token on every page view. If a cached copy of a page carries an expired security key, the script gets a new one first, so you don't have to exclude any pages from your cache.
 
 = My site is behind Cloudflare or another proxy. Will the right IP be blocked? =
 
@@ -125,9 +168,21 @@ The common proxies and CDNs are recognised automatically. For anything else, add
 
 Add your own IP address to the allow list. Allowed addresses skip all checks, including the block list. If you can't reach the dashboard, rename the `wp-content/plugins/goodbye-captcha` folder over FTP or with your host's file manager to deactivate the plugin. Then sign in, rename it back and add your address to the allow list.
 
+= What does WPBruiser Pro add? =
+
+Protection for Contact Form 7, WPForms, Elementor Pro forms, Gravity Forms, Fluent Forms, Forminator, Ninja Forms, Formidable Forms, WooCommerce and MailPoet, plus country blocking, submission rate limits and priority support. See "WPBruiser Pro" in the description, or the [WPBruiser Pro page](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=faq).
+
+= Do I still need the free plugin with Pro? =
+
+Yes. WPBruiser Pro is an add-on: it adds integrations and security features to this plugin, which keeps doing the checking, the logging and the reports.
+
+= Does WPBruiser Pro call any external service? =
+
+Only for license activation and updates, which come from wpzoom.com. Every check still runs on your server, and the IP-to-country data ships inside the add-on.
+
 = Does it send data to any server? =
 
-No. See "External services" in the description.
+No. See "External services" in the description. (The optional WPBruiser Pro add-on contacts wpzoom.com for license activation and updates only.)
 
 = Does it replace a full security plugin? =
 
@@ -135,23 +190,24 @@ No. WPBruiser handles spam bots, brute-force logins and a few hardening options.
 
 = I'm upgrading from the original WPBruiser. Will I lose my settings? =
 
-No. Your settings, allow and block lists and logs are kept, and the upgrade routines run by themselves the first time the new version loads.
+No. Your settings, allow and block lists and logs are kept, and the upgrade routines run by themselves the first time the new version loads. Two things no longer load: the old paid add-ons, and the integrations for plugins that are closed or no longer maintained (ZM Ajax Login & Register, PlanSo Forms, UltraCommunity, Seamless Donations and Epoch).
+
+= Where do I report security bugs found in this plugin? =
+Please report security bugs found in the source code of the plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/9e5fbdc6-fec3-4600-a6c2-5dc832c2bce4). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
 == Screenshots ==
 
-1. General settings, including Test Mode and log retention
-2. Security screen with the brute-force options
-3. Adding trusted addresses to the allow list
-4. Adding addresses and ranges to the block list
-5. Choosing which core WordPress forms to protect
-6. WordPress hardening options
-7. Jetpack contact form protection
-8. Ultimate Member form protection
-9. Protection settings for other supported plugins
-10. Inspecting a blocked comment in the reports
-11. Blocking an IP address from the reports
-12. Blocked attempts by country
-13. Detailed report of blocked attempts
+1. The Integrations screen: free integrations switch on with one click, and the Pro integrations for plugins you have installed are pointed out
+2. Choosing which core WordPress forms to protect, with optional comment field limits
+3. Reports: blocked attempts per day and per form, and the latest attempts
+4. Inspecting the content of a blocked comment
+5. Blocked attempts by country and by integration, with one-click IP blocking
+6. The Dashboard widget with blocked attempts for the last day, week and month
+7. Brute-force protection and the allow and block lists for IP addresses
+8. General settings, including Test Mode and how long logs are kept
+9. Email notifications for brute-force attacks and administrator logins
+10. WPBruiser Pro: Contact Form 7, WPForms, WooCommerce and more on the same Integrations screen
+11. WPBruiser Pro: country blocking and submission rate limits on the Security screen
 
 == Copyright ==
 
@@ -163,16 +219,38 @@ WPBruiser (formerly GoodBye Captcha) was originally created by Mihai Chelaru and
 WPBruiser bundles the following third-party resources, each under its own license:
 
 * phpCrypt, Copyright (C) 2005 Ryan Gilfether (GPLv3 or later)
+* phpseclib 0.3.10 (BigInteger), Copyright Jim Wigginton (MIT)
 * Bootstrap 3.4.1 and Glyphicons Halflings, Copyright Twitter, Inc. (MIT)
 * Flot 0.8.3, Copyright IOLA and Ole Laursen (MIT)
 * flot.tooltip 0.8.5, Krzysztof Urbas and Evan Steinkerchner (MIT)
 * jVectorMap 1.2.2, Copyright Kirill Lebedev (MIT)
 * Raphaël 2.3.0, Copyright Dmitry Baranovskiy (MIT)
 * morris.js 0.5.1, Copyright Olly Smith (BSD-2-Clause)
-* easyPieChart 2.1.5, Robert Fleischmann (MIT)
 * Multiselect 2.2.6, Copyright Adrian Crisan (MIT)
 
+The Integrations screen shows the icons the integrated plugins publish on WordPress.org (Gravity Forms: the icon of its official Gravity Forms CLI add-on). Plugin names and logos are trademarks of their owners and are used only to identify the integrations.
+
 == Changelog ==
+
+= 3.3.1 =
+- New: [WPZOOM Forms](https://wordpress.org/plugins/wpzoom-forms/) integration, free. Every form is protected whether it is placed as a block, with the `[wpzf_form]` shortcode or as an Elementor widget; a blocked submission is stopped before any email is sent or entry is stored, and Reports show its fields under their labels.
+
+= 3.3.0 =
+- New: protection is on from the start. A new install protects WordPress login, registration, lost password and comments, plus every supported plugin that is already active.
+- New: a Dashboard widget with blocked attempts for the last day, week and month, and the forms bots target most.
+- New: administrators see a small "protected" note under every form WPBruiser covers, so it is easy to check what is protected. Visitors never see it, and it can be hidden in Settings.
+- Fix: about one genuine visitor in ten could be rejected on any protected form. On sites without the old mcrypt extension (every PHP 7.2+ site), the bundled cipher library added no padding when the compressed token filled its last block exactly, and then removed real data from the end while decrypting. Tokens now always decrypt; 10,000 test round trips had no failures.
+- New: an Integrations screen. Every integration, free and Pro, is a card that shows whether its plugin is active, with a switch to turn protection on or off (and a switch per form where there are several), plus filters and search. It replaces the separate Contact Forms, Membership, eCommerce and Others screens.
+- New: an extension API for add-ons such as WPBruiser Pro. An add-on registers its own protection modules through the `wpbruiser_register_modules` filter and protects a form with `wpbruiser_get_token_field_html()`, `wpbruiser_is_option_enabled()` and `wpbruiser_verify_submission()`. Each add-on loads its own code; WPBruiser still only loads files from its own folder.
+- New: the `wpbruiser_loaded` action, and the `wpbruiser_country_id_for_ip` filter for supplying your own IP-to-country data.
+- New: the `wpbruiser_reject_reason` filter, which lets an add-on reject a submission that passed every other check (WPBruiser Pro uses it for rate limits), and add-on settings boxes on the Security screen.
+- New: `wpbruiser_get_token_field_names()`, so integrations can keep the token fields out of stored submissions, and a `wpbruiser:token` browser event fired when a form receives its token, for forms that submit as JSON.
+- Fix: Jetpack contact forms. Blocked submissions kept no fields in Reports, current Jetpack versions (which renamed the form class) were not recognised, and older ones could hit a PHP error on a blocked submission.
+- Fix: a lost password request that fails the check now shows an error on the form. It used to redirect to the login page, which also broke WooCommerce's lost password form.
+- The Contact Forms, Membership, eCommerce and Others screens now list modules added by add-ons. The eCommerce screen stays hidden until an add-on adds a module to it.
+- Removed leftover references to the old paid extensions from the settings screens, the AJAX setup and brute-force login detection.
+- New: the WPBruiser ninja, redrawn as a vector icon, on every WPBruiser screen, in the admin menu (tinted to match your admin colour scheme) and in the Dashboard widget.
+- New: Settings and Get Pro links on the Plugins screen, and a WPBruiser Pro box in the settings sidebar that lists the Pro integrations and points out which of those plugins are active on your site. Both disappear once WPBruiser Pro is active.
 
 = 3.2.1 =
 - Audited every third-party integration against the plugin directory and removed those whose plugin is gone: ZM Ajax Login & Register (closed 2023), PlanSo Forms (closed 2021), UltraCommunity (30 installs, last updated 2020) and Seamless Donations (last updated 2024, tested only to 6.4). Support for the Epoch comments iframe was removed as well; that plugin has not been updated since 2015. The readme no longer lists Postmatic and WP User Control, both closed, and now lists HTML Forms and WP-Members, which are supported but were never mentioned.

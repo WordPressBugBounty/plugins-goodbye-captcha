@@ -49,6 +49,7 @@ final class GdbcRequestController
 	//CONST REJECT_REASON_LINK_NOTIFICATION      = 13; // used for trackbacks and pingbacks
 	CONST REJECT_REASON_COMMENT_FIELD_TOO_LONG = 14;
 	CONST REJECT_REASON_COUNTRY_IP_BLOCKED     = 15;
+	CONST REJECT_REASON_RATE_LIMITED           = 16;
 
 	private static $rejectReasonCode     = null;
 	private static $browserInfoInputName = null;
@@ -75,6 +76,25 @@ final class GdbcRequestController
 
 		if((null === self::$rejectReasonCode) && GdbcIPUtils::isClientIpBlockedByCountry()){
 			self::$rejectReasonCode = self::REJECT_REASON_COUNTRY_IP_BLOCKED;
+		}
+
+		if(null === self::$rejectReasonCode)
+		{
+			/**
+			 * Lets an add-on reject a submission that passed every WPBruiser check.
+			 *
+			 * Return one of the REJECT_REASON_* constants to reject it, for example
+			 * GdbcRequestController::REJECT_REASON_RATE_LIMITED. Runs at most once per
+			 * request, and not for allow-listed IPs.
+			 *
+			 * @since 3.3.0
+			 * @param int|null          $reasonId      Null to accept the submission.
+			 * @param GdbcAttemptEntity $attemptEntity The form being submitted.
+			 */
+			$filteredReasonId = apply_filters('wpbruiser_reject_reason', null, $attemptEntity);
+
+			if(is_int($filteredReasonId) && $filteredReasonId > 0)
+				self::$rejectReasonCode = $filteredReasonId;
 		}
 
 		if( (null === self::$rejectReasonCode) && GoodByeCaptchaUtils::isLoginAttemptEntity($attemptEntity))
@@ -322,6 +342,7 @@ final class GdbcRequestController
 				//self::REJECT_REASON_LINK_NOTIFICATION     => __('Link Notification', 'goodbye-captcha'),
 				self::REJECT_REASON_COMMENT_FIELD_TOO_LONG  => __('Comment Field Too Long', 'goodbye-captcha'),
 				self::REJECT_REASON_COUNTRY_IP_BLOCKED      => __('Blocked Country', 'goodbye-captcha'),
+				self::REJECT_REASON_RATE_LIMITED            => __('Too Many Submissions', 'goodbye-captcha'),
 			);
 		}
 
@@ -333,6 +354,45 @@ final class GdbcRequestController
 	public static function getPostedBrowserInfoInputName()
 	{
 		return self::$browserInfoInputName;
+	}
+
+	/**
+	 * Names of the POST fields the plugin's token uses in the current request.
+	 *
+	 * Always includes the hidden token field. When a token was submitted, also the
+	 * per-token browser field, read from the token itself. Nothing is validated or
+	 * logged here, so integrations can call this before the request is checked, for
+	 * example to keep these fields out of a form plugin's stored submission.
+	 *
+	 * @return string[]
+	 */
+	public static function getSubmittedTokenFieldNames()
+	{
+		$settingsModuleInstance = GdbcModulesController::getPublicModuleInstance(GdbcModulesController::MODULE_SETTINGS);
+		if(null === $settingsModuleInstance)
+			return array();
+
+		$hiddenInputName = (string)$settingsModuleInstance->getOption(GdbcSettingsAdminModule::OPTION_HIDDEN_INPUT_NAME);
+		if('' === $hiddenInputName)
+			return array();
+
+		$arrFieldNames = array($hiddenInputName);
+
+		if(null !== self::$browserInfoInputName)
+		{
+			$arrFieldNames[] = self::$browserInfoInputName;
+			return $arrFieldNames;
+		}
+
+		$receivedToken = (isset($_POST[$hiddenInputName]) && is_string($_POST[$hiddenInputName])) ? wp_unslash($_POST[$hiddenInputName]) : null;
+		if(null === $receivedToken || !isset($receivedToken[10]))
+			return $arrFieldNames;
+
+		$arrDecryptedToken = json_decode(MchCrypt::decryptToken($settingsModuleInstance->getOption(GdbcSettingsAdminModule::OPTION_TOKEN_SECRET_KEY), $receivedToken), true);
+		if(isset($arrDecryptedToken[0]) && is_string($arrDecryptedToken[0]) && false !== ($tokenIndex = strpos($arrDecryptedToken[0], self::TOKEN_SEPARATOR)))
+			$arrFieldNames[] = substr($arrDecryptedToken[0], 0, $tokenIndex);
+
+		return $arrFieldNames;
 	}
 
 	public static function redirectToHomePage()

@@ -7,14 +7,14 @@
  * @copyright 2014-2018 Mihai Chelaru, 2026 WPZOOM
  *
  * @wordpress-plugin
- * Plugin Name: WPBruiser
- * Plugin URI: https://wordpress.org/plugins/goodbye-captcha/
- * Description: An extremely powerful anti-spam plugin that blocks spambots without annoying captcha images.
- * Version: 3.2.1
+ * Plugin Name: WPBruiser - No CAPTCHA Anti-Spam & Login Protection
+ * Plugin URI: https://www.wpzoom.com/plugins/wpbruiser/
+ * Description: Stops spam bots and brute-force logins on your WordPress forms with an invisible check. No puzzles, no image challenges, no third-party service.
+ * Version: 3.3.1
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Author: WPZOOM
- * Author URI: https://wpzoom.com/
+ * Author URI: https://www.wpzoom.com/
  * License: GPLv2 or later
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: goodbye-captcha
@@ -29,14 +29,14 @@ if(!class_exists('GoodByeCaptcha', false))
 	class GoodByeCaptcha
 	{
 		
-		CONST PLUGIN_VERSION    = '3.2.1';
+		CONST PLUGIN_VERSION    = '3.3.1';
 		// PLUGIN_SLUG is also the prefix for option keys and admin menu slugs, so it
 		// must keep its historical value or existing installs lose their settings.
 		// The text domain is separate and must equal the WordPress.org slug.
 		CONST PLUGIN_SLUG        = 'wp-bruiser';
 		CONST PLUGIN_TEXT_DOMAIN = 'goodbye-captcha';
 		CONST PLUGIN_NAME       = 'WPBruiser';
-		CONST PLUGIN_SITE_URL   = 'https://wordpress.org/plugins/goodbye-captcha/';
+		CONST PLUGIN_SITE_URL   = 'https://www.wpzoom.com/plugins/wpbruiser';
 		CONST PLUGIN_SUPPORT_URL = 'https://wordpress.org/support/plugin/goodbye-captcha/';
 		CONST PLUGIN_SHORT_CODE = 'wpbr';
 
@@ -45,6 +45,7 @@ if(!class_exists('GoodByeCaptcha', false))
 			'GoodByeCaptchaPublic'        => '/engine/GoodByeCaptchaPublic.php',
 			'GoodByeCaptchaAdmin'         => '/engine/GoodByeCaptchaAdmin.php',
 			'GdbcAjaxController'          => '/engine/GdbcAjaxController.php',
+			'GdbcAdminPostController'     => '/engine/GdbcAdminPostController.php',
 			'GoodByeCaptchaUtils'         => '/engine/GoodByeCaptchaUtils.php',
 			'GdbcRequestController'       => '/engine/GdbcRequestController.php',
 			'GdbcIPUtils'                 => '/engine/GdbcIPUtils.php',
@@ -53,14 +54,13 @@ if(!class_exists('GoodByeCaptcha', false))
 			'GdbcBaseAdminModule'         => '/engine/modules/GdbcBaseAdminModule.php',
 			'GdbcBasePublicModule'        => '/engine/modules/GdbcBasePublicModule.php',
 			'GdbcBaseAdminPage'           => '/engine/admin/pages/GdbcBaseAdminPage.php',
-			'GdbcContactFormsAdminPage'   => '/engine/admin/pages/GdbcContactFormsAdminPage.php',
+			'GdbcIntegrationsAdminPage'   => '/engine/admin/pages/GdbcIntegrationsAdminPage.php',
+			'GdbcIntegrations'            => '/engine/admin/GdbcIntegrations.php',
+			'GdbcDashboardWidget'         => '/engine/admin/GdbcDashboardWidget.php',
 			'GdbcSettingsAdminPage'       => '/engine/admin/pages/GdbcSettingsAdminPage.php',
 			'GdbcWordpressAdminPage'      => '/engine/admin/pages/GdbcWordpressAdminPage.php',
-			'GdbcECommerceAdminPage'      => '/engine/admin/pages/GdbcECommerceAdminPage.php',
 			'GdbcNotificationsAdminPage'  => '/engine/admin/pages/GdbcNotificationsAdminPage.php',
-			'GdbcMembershipAdminPage'     => '/engine/admin/pages/GdbcMembershipAdminPage.php',
 			'GdbcSecurityAdminPage'       => '/engine/admin/pages/GdbcSecurityAdminPage.php',
-			'GdbcOthersAdminPage'         => '/engine/admin/pages/GdbcOthersAdminPage.php',
 			'GdbcReportsAdminPage'        => '/engine/admin/pages/GdbcReportsAdminPage.php',
 			'GdbcWelcomeAdminPage'        => '/engine/admin/pages/GdbcWelcomeAdminPage.php',
 			'GdbcAdminNotice'             => '/engine/admin/GdbcAdminNotice.php',
@@ -88,13 +88,28 @@ if(!class_exists('GoodByeCaptcha', false))
 				'PLUGIN_TEXT_DOMAIN' => self::PLUGIN_TEXT_DOMAIN,
 			);
 
+			// Modules supplied by add-ons (WPBruiser Pro) join the registry first, so the
+			// admin screens, public hooks and AJAX handlers below all see them.
+			GdbcModulesController::registerExtensionModules();
+
 			if (MchGdbcWpUtils::isAjaxRequest()) {
 				GdbcAjaxController::processRequest();
+			} elseif (GdbcAdminPostController::isProtectedRequest()) {
+				// A front-end form posting to admin-post.php, which WordPress serves with
+				// WP_ADMIN defined; the dashboard branch below would otherwise claim it.
+				GdbcAdminPostController::processRequest();
 			} elseif (MchGdbcWpUtils::isUserInDashboard()) {
 				GoodByeCaptchaAdmin::getInstance($arrPluginInfo);
 			} else {
 				GoodByeCaptchaPublic::getInstance($arrPluginInfo);
 			}
+
+			/**
+			 * Fires once WPBruiser is running and its extension API can be used.
+			 *
+			 * @param int $apiVersion GdbcModulesController::EXTENSION_API_VERSION.
+			 */
+			do_action('wpbruiser_loaded', GdbcModulesController::EXTENSION_API_VERSION);
 
 		}
 
@@ -133,6 +148,8 @@ if(!class_exists('GoodByeCaptcha', false))
 	require_once dirname(__FILE__) . '/includes/MchGdbcLibAutoloader.php';
 
 	spl_autoload_register(array('GoodByeCaptcha', 'classAutoLoad'));
+
+	require_once dirname(__FILE__) . '/engine/wpbruiser-extension-api.php';
 
 
 	if (defined('ABSPATH'))
