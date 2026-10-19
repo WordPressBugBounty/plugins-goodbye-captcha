@@ -50,6 +50,18 @@ abstract class GdbcBaseAdminPage extends MchGdbcBaseAdminPage
 				null
 			);
 		}
+		else
+		{
+			add_meta_box(
+				"gdbc-pro-status-metabox",
+				__('WPBruiser Pro', 'goodbye-captcha'),
+				array( $this, 'renderProStatusMetaBox' ),
+				$this->getAdminScreenId(),
+				'side',
+				'high',
+				null
+			);
+		}
 
 		add_meta_box(
 			"gdbc-help-metabox",
@@ -159,11 +171,179 @@ abstract class GdbcBaseAdminPage extends MchGdbcBaseAdminPage
 		<?php
 	}
 
+	/**
+	 * Sidebar box for sites with WPBruiser Pro: what is protected, how many attempts
+	 * were blocked lately, and whether the license is in order. Pro's features need
+	 * an active license (with a grace period after it expires), so the box also says
+	 * when they are about to switch off, or are off.
+	 */
+	public function renderProStatusMetaBox()
+	{
+		$arrLicense   = GdbcIntegrations::getProLicense();
+		$arrProtected = self::getProtectedIntegrationNames();
+		$isLoggingOn  = ((int)GdbcSettingsAdminModule::getInstance()->getOption(GdbcSettingsAdminModule::OPTION_MAX_LOGS_DAYS)) > 0;
+		$blockedCount = $isLoggingOn ? GdbcDbAccessController::countAttemptsSince(MchGdbcHttpRequest::getServerRequestTime() - 30 * DAY_IN_SECONDS) : null;
+
+		$licenseStatus = null !== $arrLicense ? (string)$arrLicense['status'] : null;
+		$features      = null !== $arrLicense ? (string)$arrLicense['features'] : 'active';
+		$isExpired     = 'expired' === $licenseStatus;
+		$dateFormat    = get_option('date_format');
+
+		$expiryDate = '';
+		if(null !== $arrLicense && '' !== $arrLicense['expires'] && 'lifetime' !== $arrLicense['expires'])
+		{
+			$expiryTime = strtotime($arrLicense['expires']);
+			$expiryDate = $expiryTime ? date_i18n($dateFormat, $expiryTime) : '';
+		}
+
+		$isLocked    = 'locked' === $features;
+		$isProtected = !empty($arrProtected);
+
+		if($isLocked)
+			$headline = __('Pro features are off', 'goodbye-captcha');
+		elseif($isProtected)
+			$headline = __('Your site is protected', 'goodbye-captcha');
+		else
+			$headline = __('No forms are protected yet', 'goodbye-captcha');
+		?>
+		<div class="gdbc-pro gdbc-pro-status<?php echo ($isProtected && !$isLocked) ? '' : ' is-unprotected'; ?>">
+			<p class="gdbc-pro__head">
+				<span class="gdbc-pro-status__shield" aria-hidden="true"></span>
+				<strong><?php echo esc_html($headline); ?></strong>
+			</p>
+
+			<?php if($isProtected) : ?>
+				<p>
+					<?php
+					$arrShown  = array_slice($arrProtected, 0, 4);
+					$moreCount = count($arrProtected) - count($arrShown);
+					if($moreCount > 0)
+					{
+						/* translators: %d: number of further integrations. */
+						$arrShown[] = sprintf(_n('%d more', '%d more', $moreCount, 'goodbye-captcha'), $moreCount);
+					}
+
+					/* translators: %s: list of protected plugins, e.g. "WordPress, WooCommerce and Contact Form 7". */
+					echo esc_html(sprintf(__('WPBruiser is checking the forms of %s.', 'goodbye-captcha'), wp_sprintf('%l', $arrShown)));
+					?>
+				</p>
+			<?php elseif(!$isLocked) : ?>
+				<p>
+					<a href="<?php echo esc_url((string)self::getPageUrlByName('Integrations')); ?>"><?php esc_html_e('Choose the forms to protect', 'goodbye-captcha'); ?></a>
+				</p>
+			<?php endif; ?>
+
+			<ul class="gdbc-pro-status__facts">
+				<?php if(null !== $blockedCount) : ?>
+					<li>
+						<span><?php esc_html_e('Blocked, last 30 days', 'goodbye-captcha'); ?></span>
+						<a href="<?php echo esc_url((string)self::getPageUrlByName('Reports')); ?>"><?php echo esc_html(number_format_i18n($blockedCount)); ?></a>
+					</li>
+				<?php endif; ?>
+				<li>
+					<span><?php esc_html_e('Version', 'goodbye-captcha'); ?></span>
+					<span><?php echo esc_html(GdbcIntegrations::getProVersion()); ?></span>
+				</li>
+				<?php if(null !== $licenseStatus) : ?>
+					<li>
+						<span><?php esc_html_e('License', 'goodbye-captcha'); ?></span>
+						<?php if('valid' === $licenseStatus) : ?>
+							<span class="gdbc-pro-status__ok">
+								<?php
+								if('lifetime' === $arrLicense['expires'])
+									esc_html_e('Active, lifetime', 'goodbye-captcha');
+								elseif('' !== $expiryDate)
+									/* translators: %s: expiry date. */
+									echo esc_html(sprintf(__('Active until %s', 'goodbye-captcha'), $expiryDate));
+								else
+									esc_html_e('Active', 'goodbye-captcha');
+								?>
+							</span>
+						<?php elseif($isExpired) : ?>
+							<span class="gdbc-pro-status__warn"><?php echo '' !== $expiryDate ? esc_html(sprintf(/* translators: %s: date. */ __('Expired %s', 'goodbye-captcha'), $expiryDate)) : esc_html__('Expired', 'goodbye-captcha'); ?></span>
+						<?php else : ?>
+							<span class="gdbc-pro-status__warn"><?php esc_html_e('Not active', 'goodbye-captcha'); ?></span>
+						<?php endif; ?>
+					</li>
+				<?php endif; ?>
+			</ul>
+
+			<?php if('active' !== $features) : ?>
+				<p class="gdbc-pro__found">
+					<?php
+					if('grace' === $features)
+					{
+						/* translators: %s: date. */
+						echo esc_html(sprintf(__('Pro\'s integrations, country blocking and rate limits switch off on %s unless you renew.', 'goodbye-captcha'), date_i18n($dateFormat, (int)$arrLicense['grace_ends'])));
+					}
+					elseif($isExpired)
+					{
+						esc_html_e('Pro\'s integrations, country blocking and rate limits are off; WPBruiser\'s free protection is still on. Renew to switch Pro back on with your settings as they were.', 'goodbye-captcha');
+					}
+					else
+					{
+						esc_html_e('Pro\'s integrations, country blocking and rate limits are off until you activate your license. WPBruiser\'s free protection is on.', 'goodbye-captcha');
+					}
+					?>
+				</p>
+				<p class="gdbc-pro__cta">
+					<?php if($isExpired && '' !== $arrLicense['renew_url']) : ?>
+						<a class="button button-primary" href="<?php echo esc_url($arrLicense['renew_url']); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Renew License', 'goodbye-captcha'); ?><span class="screen-reader-text"> <?php esc_html_e('(opens in a new tab)', 'goodbye-captcha'); ?></span></a>
+					<?php elseif('' !== $arrLicense['manage_url']) : ?>
+						<a class="button button-primary" href="<?php echo esc_url($arrLicense['manage_url']); ?>"><?php esc_html_e('Activate License', 'goodbye-captcha'); ?></a>
+					<?php endif; ?>
+				</p>
+			<?php elseif(null !== $arrLicense && '' !== $arrLicense['manage_url']) : ?>
+				<p class="gdbc-pro__note"><a href="<?php echo esc_url($arrLicense['manage_url']); ?>"><?php esc_html_e('Manage license', 'goodbye-captcha'); ?></a></p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Names of the integrations with at least one protected form, WordPress first.
+	 *
+	 * @return string[]
+	 */
+	private static function getProtectedIntegrationNames()
+	{
+		$arrNames = array();
+
+		foreach(GdbcIntegrations::getForms(GdbcModulesController::MODULE_WORDPRESS) as $arrForm)
+		{
+			if($arrForm['Enabled'])
+			{
+				$arrNames[] = __('WordPress', 'goodbye-captcha');
+				break;
+			}
+		}
+
+		foreach(GdbcIntegrations::getCards() as $arrCard)
+		{
+			if(GdbcIntegrations::STATE_AVAILABLE === $arrCard['State'] && $arrCard['EnabledCount'] > 0)
+				$arrNames[] = $arrCard['Name'];
+		}
+
+		return $arrNames;
+	}
+
 	public function renderNeedHelpMetaBox()
 	{
-		$display_div  = '<p>' . esc_html__('Got a question or ran into an issue? Our support forum is the fastest way to reach us.', 'goodbye-captcha') . '</p>';
+		$docsUrl = add_query_arg(
+			array(
+				'utm_source'   => 'wpadmin',
+				'utm_medium'   => 'wpbruiser-free',
+				'utm_campaign' => 'support-box',
+			),
+			GoodByeCaptcha::PLUGIN_DOCS_URL
+		);
 
-		$display_div .= '<p class="contact-help"><a class="button button-primary" href="' . esc_url(GoodByeCaptcha::PLUGIN_SUPPORT_URL) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Support Forum', 'goodbye-captcha') . '</a></p>';
+		$display_div  = '<p>' . esc_html__('Step-by-step guides for every screen are in the documentation. Still stuck? Our support forum is the fastest way to reach us.', 'goodbye-captcha') . '</p>';
+
+		$display_div .= '<p class="contact-help">';
+		$display_div .= '<a class="button button-primary" href="' . esc_url($docsUrl) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Documentation', 'goodbye-captcha') . '</a> ';
+		$display_div .= '<a class="button" href="' . esc_url(GoodByeCaptcha::PLUGIN_SUPPORT_URL) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Support Forum', 'goodbye-captcha') . '</a>';
+		$display_div .= '</p>';
 
 		echo wp_kses_post($display_div);
 	}
@@ -182,7 +362,7 @@ abstract class GdbcBaseAdminPage extends MchGdbcBaseAdminPage
 
 		$textInfo .= __(' In case something goes wrong, a warning message will be shown.', 'goodbye-captcha');
 
-		echo '<p style="text-align: justify">' . wp_kses_post($textInfo) . '</p>';
+		echo '<p>' . wp_kses_post($textInfo) . '</p>';
 
 		$textInfo  = '<div class = "mch-meta-notice-warning">';
 		$textInfo .= '<b>' . esc_html__('Turn off Test Mode as soon as you\'re done with testing!', 'goodbye-captcha') . '</b>';

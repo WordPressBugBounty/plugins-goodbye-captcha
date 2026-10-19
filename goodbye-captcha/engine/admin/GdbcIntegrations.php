@@ -27,11 +27,12 @@ final class GdbcIntegrations
 	CONST STATE_AVAILABLE    = 'available';    // switches work
 	CONST STATE_NOT_DETECTED = 'not-detected'; // the plugin it protects is not active
 	CONST STATE_NEEDS_PRO    = 'needs-pro';    // part of WPBruiser Pro, which is not active
+	CONST STATE_NEEDS_LICENSE = 'needs-license'; // Pro is installed, but its license isn't active
 
 	/**
-	 * Where "Upgrade" links point.
+	 * Where "Upgrade" links point: the upgrade page for people using the free plugin.
 	 */
-	CONST PRO_URL = 'https://www.wpzoom.com/plugins/wpbruiser/';
+	CONST PRO_URL = 'https://www.wpzoom.com/plugins/wpbruiser/upgrade/';
 
 	/**
 	 * Every integration this version knows about, keyed by module name.
@@ -124,6 +125,17 @@ final class GdbcIntegrations
 				'WpOrgSlug'   => 'woocommerce',
 				'PluginFiles' => array('woocommerce/woocommerce.php'),
 				'IsDetected'  => array(__CLASS__, 'isWooCommerceActive'),
+			),
+
+			GdbcModulesController::MODULE_EASY_DIGITAL_DOWNLOADS => array(
+				'Name'        => 'Easy Digital Downloads',
+				'Description' => __('Login, registration, lost password, and login and account creation at checkout. Optional card-testing protection for every purchase.', 'goodbye-captcha'),
+				'Category'    => 'ecommerce',
+				'Tier'        => self::TIER_PRO,
+				'Logo'        => array('EDD', '#1c2135', '#ffffff'),
+				'WpOrgSlug'   => 'easy-digital-downloads',
+				'PluginFiles' => array('easy-digital-downloads/easy-digital-downloads.php', 'easy-digital-downloads-pro/easy-digital-downloads.php'),
+				'IsDetected'  => array(__CLASS__, 'isEasyDigitalDownloadsActive'),
 			),
 
 			GdbcModulesController::MODULE_CONTACT_FORM_7 => array(
@@ -299,6 +311,65 @@ final class GdbcIntegrations
 	}
 
 	/**
+	 * WPBruiser Pro's license, as Pro describes it, or null without Pro (or with a
+	 * Pro version from before 1.1.0).
+	 *
+	 * @return array|null With status, expires, message, manage_url, renew_url,
+	 *                    features ('active', 'grace' or 'locked') and grace_ends.
+	 */
+	public static function getProLicense()
+	{
+		if(null === self::getProVersion())
+			return null;
+
+		/**
+		 * Lets WPBruiser Pro describe its license.
+		 *
+		 * @since 3.4.0
+		 * @param array|null $license License summary.
+		 */
+		$arrLicense = apply_filters('wpbruiser_pro_license', null);
+		if(!is_array($arrLicense))
+			return null;
+
+		return wp_parse_args($arrLicense, array(
+			'status'     => '',
+			'expires'    => '',
+			'message'    => '',
+			'manage_url' => '',
+			'renew_url'  => '',
+			'features'   => 'active',
+			'grace_ends' => 0,
+		));
+	}
+
+	/**
+	 * Whether WPBruiser Pro is installed but switched off for lack of an active license.
+	 *
+	 * @return bool
+	 */
+	public static function isProLocked()
+	{
+		$arrLicense = self::getProLicense();
+		return null !== $arrLicense && 'locked' === $arrLicense['features'];
+	}
+
+	/**
+	 * Where to send someone whose Pro is switched off: renewal for an expired
+	 * license, the license screen otherwise.
+	 *
+	 * @return string
+	 */
+	public static function getProLicenseActionUrl()
+	{
+		$arrLicense = self::getProLicense();
+		if(null === $arrLicense)
+			return self::getProUrl('license');
+
+		return ('expired' === $arrLicense['status'] && '' !== $arrLicense['renew_url']) ? $arrLicense['renew_url'] : $arrLicense['manage_url'];
+	}
+
+	/**
 	 * Every card for the Integrations screen, with its current state.
 	 *
 	 * Order: switched-on integrations first, then ones whose plugin is active, then
@@ -309,6 +380,7 @@ final class GdbcIntegrations
 	public static function getCards()
 	{
 		$isProActive = null !== self::getProVersion();
+		$isProLocked = self::isProLocked();
 		$arrCards    = array();
 
 		$arrEntries = self::getCatalog();
@@ -345,6 +417,8 @@ final class GdbcIntegrations
 
 			if(self::TIER_PRO === $arrEntry['Tier'] && !$isProActive)
 				$state = self::STATE_NEEDS_PRO;
+			elseif(self::TIER_PRO === $arrEntry['Tier'] && $isProLocked)
+				$state = self::STATE_NEEDS_LICENSE;
 			elseif(!$isDetected || !$isRegistered)
 				$state = self::STATE_NOT_DETECTED;
 			else
@@ -449,6 +523,8 @@ final class GdbcIntegrations
 				'Option'  => (string)$optionName,
 				'Label'   => self::getShortFormLabel(wp_strip_all_tags((string)$label)),
 				'Enabled' => (bool)$adminModuleInstance->getOption($optionName),
+				// Opt-in forms ('EnableByDefault' => false) are never switched on in bulk.
+				'OptIn'   => isset($arrOptionInfo['EnableByDefault']) && false === $arrOptionInfo['EnableByDefault'],
 			);
 		}
 
@@ -569,7 +645,10 @@ final class GdbcIntegrations
 		}
 
 		foreach($arrForms as $arrForm)
-			$adminModuleInstance->saveOption($arrForm['Option'], 1);
+		{
+			if(empty($arrForm['OptIn']))
+				$adminModuleInstance->saveOption($arrForm['Option'], 1);
+		}
 
 		return true;
 	}
@@ -623,6 +702,13 @@ final class GdbcIntegrations
 
 			$arrOptionNames = array($optionName);
 		}
+		elseif($isEnabled)
+		{
+			// The card's main switch leaves opt-in forms alone; they have their own switch.
+			$arrOptionNames = wp_list_pluck(array_filter($arrCard['Forms'], function($arrForm) {
+				return empty($arrForm['OptIn']);
+			}), 'Option');
+		}
 
 		$adminModuleInstance = GdbcModulesController::getAdminModuleInstance($moduleName);
 		foreach($arrOptionNames as $name)
@@ -666,6 +752,8 @@ final class GdbcIntegrations
 	public static function isFormidableFormsActive() { return class_exists('FrmAppHelper', false); }
 
 	public static function isMailPoetActive()        { return defined('MAILPOET_VERSION'); }
+	/** @return bool */
+	public static function isEasyDigitalDownloadsActive() { return defined('EDD_VERSION'); }
 
 	private function __construct() {}
 }

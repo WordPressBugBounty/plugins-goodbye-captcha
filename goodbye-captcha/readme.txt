@@ -1,10 +1,10 @@
 === WPBruiser - No CAPTCHA Anti-Spam & Login Protection ===
 Contributors: wpzoom
-Tags: anti-spam, spam protection, captcha, brute force, contact form
+Tags: anti-spam, spam protection, captcha, brute force, limit login attempts
 Requires at least: 6.5
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 3.3.1
+Stable tag: 3.4.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ Because bad submissions are rejected at the door, they never land in your modera
 
 Everything runs on your own server. WPBruiser does not call remote APIs, does not load outside scripts or fonts and does not send your visitors' data anywhere.
 
-**Notice:** WPBruiser was created by [Mihai Chelaru](https://profiles.wordpress.org/mihche/). As of version 3.2.0, it is maintained by [WPZOOM](https://profiles.wordpress.org/wpzoom/).
+**Notice:** As of version 3.2.0, it is maintained by [WPZOOM](https://profiles.wordpress.org/wpzoom/).
 
 = Forms you can protect =
 
@@ -42,10 +42,16 @@ Each integration is a card on the **Integrations** screen, which shows whether i
 * **[HTML Forms](https://wordpress.org/plugins/html-forms/)**: every form you build with it
 * **[wpDiscuz](https://wordpress.org/plugins/wpdiscuz/)**: comments posted through its AJAX comment system
 
-Using Contact Form 7, WPForms, WooCommerce, Elementor Pro, Gravity Forms or another popular form plugin? [WPBruiser Pro](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=free-integrations) protects them too. See "WPBruiser Pro" below.
+Using Contact Form 7, WPForms, WooCommerce, Easy Digital Downloads, Elementor Pro, Gravity Forms or another popular form plugin? [WPBruiser Pro](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=free-integrations) protects them too. See "WPBruiser Pro" below.
 
 = Brute-force and hardening tools =
 
+* Limits failed logins: after 5 failed logins (you choose the number) an IP address is locked out for 20 minutes, and for a day if it keeps coming back. Covers the login form, XML-RPC, application passwords and the login forms of WooCommerce, Easy Digital Downloads and other plugins, with a list of current lockouts and a Release button
+* Bans usernames such as "admin" and "root": an IP address that tries one that no account uses is locked out at once
+* Optional lockdown mode: during a detected attack, accepts logins only from IP addresses each user has logged in from before
+* Moves the login page to an address of your choice, so wp-login.php and wp-admin show a "not found" page to visitors
+* Closes the REST API to visitors who are not logged in, with a list of plugin namespaces that stay open
+* Turns off application passwords, and stops PHP files in the uploads folder from running
 * Detects a login brute-force attack in progress and can email you when one starts
 * Automatically blocks IP addresses that keep hammering your login
 * Optionally rejects login attempts from IP addresses on the bundled lists of known web attackers and anonymous proxies, including Tor exit nodes
@@ -95,6 +101,7 @@ Using Contact Form 7, WPForms, WooCommerce, Elementor Pro, Gravity Forms or anot
 **Shop and newsletters**
 
 * **[WooCommerce](https://wordpress.org/plugins/woocommerce/)**: login (on My Account and at checkout), registration, lost and reset password, product reviews, and account creation at checkout on both the classic checkout and the Checkout block
+* **[Easy Digital Downloads](https://wordpress.org/plugins/easy-digital-downloads/)** 3.0+: login, registration and lost password forms, login and account creation at checkout, and optional card-testing protection that checks every purchase
 * **[MailPoet](https://wordpress.org/plugins/mailpoet/)** subscription forms wherever they appear: widgets, blocks, shortcodes, pop-ups, slide-ins, fixed bars and below posts. No subscriber is created and no confirmation email is sent for a blocked sign-up.
 
 **Security**
@@ -107,7 +114,7 @@ Using Contact Form 7, WPForms, WooCommerce, Elementor Pro, Gravity Forms or anot
 * Every Pro integration is switched on automatically for the plugins you already use, on first activation and after each update
 * Blocked attempts from every integration appear in the same Reports screen and Dashboard widget, with the submitted content when you keep it
 * Updates and priority support from the WPZOOM team, with a 14-day money-back guarantee
-* Protection keeps working if your license expires; only updates and support stop
+* An active license switches the Pro features on; if it expires, they keep working for 14 more days, then the site keeps the free protection until you renew
 
 [Compare free and Pro, and see the plans](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=pro-plans)
 
@@ -166,11 +173,13 @@ The common proxies and CDNs are recognised automatically. For anything else, add
 
 = I locked myself out. What now? =
 
-Add your own IP address to the allow list. Allowed addresses skip all checks, including the block list. If you can't reach the dashboard, rename the `wp-content/plugins/goodbye-captcha` folder over FTP or with your host's file manager to deactivate the plugin. Then sign in, rename it back and add your address to the allow list.
+If you mistyped your password too many times, wait for the lockout to end (20 minutes by default) or log in from another connection and press Release on the Security screen. If you moved the login page and lost its address, add `define('WPBRUISER_DISABLE_LOGIN_URL', true);` to wp-config.php to use wp-login.php again; the address was also emailed to the site admin when you set it.
+
+To avoid both, add your own IP address to the allow list. Allowed addresses skip all checks, including the block list. If you can't reach the dashboard, rename the `wp-content/plugins/goodbye-captcha` folder over FTP or with your host's file manager to deactivate the plugin. Then sign in, rename it back and add your address to the allow list.
 
 = What does WPBruiser Pro add? =
 
-Protection for Contact Form 7, WPForms, Elementor Pro forms, Gravity Forms, Fluent Forms, Forminator, Ninja Forms, Formidable Forms, WooCommerce and MailPoet, plus country blocking, submission rate limits and priority support. See "WPBruiser Pro" in the description, or the [WPBruiser Pro page](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=faq).
+Protection for Contact Form 7, WPForms, Elementor Pro forms, Gravity Forms, Fluent Forms, Forminator, Ninja Forms, Formidable Forms, WooCommerce, Easy Digital Downloads and MailPoet, plus country blocking, submission rate limits and priority support. See "WPBruiser Pro" in the description, or the [WPBruiser Pro page](https://www.wpzoom.com/plugins/wpbruiser/?utm_source=wporg&utm_medium=readme&utm_campaign=faq).
 
 = Do I still need the free plugin with Pro? =
 
@@ -178,11 +187,11 @@ Yes. WPBruiser Pro is an add-on: it adds integrations and security features to t
 
 = Does WPBruiser Pro call any external service? =
 
-Only for license activation and updates, which come from wpzoom.com. Every check still runs on your server, and the IP-to-country data ships inside the add-on.
+Only for the license (activation and a daily check) and updates, which come from wpzoom.com. Every check still runs on your server, and the IP-to-country data ships inside the add-on.
 
 = Does it send data to any server? =
 
-No. See "External services" in the description. (The optional WPBruiser Pro add-on contacts wpzoom.com for license activation and updates only.)
+No. See "External services" in the description. (The optional WPBruiser Pro add-on contacts wpzoom.com for its license and updates only.)
 
 = Does it replace a full security plugin? =
 
@@ -231,6 +240,24 @@ WPBruiser bundles the following third-party resources, each under its own licens
 The Integrations screen shows the icons the integrated plugins publish on WordPress.org (Gravity Forms: the icon of its official Gravity Forms CLI add-on). Plugin names and logos are trademarks of their owners and are used only to identify the integrations.
 
 == Changelog ==
+
+= 3.4.0 =
+- New: login lockouts. After 5 failed logins in 12 hours (you choose the number), an IP address is locked out for 20 minutes, and for 24 hours after its 4th lockout in a day. They cover the login form, XML-RPC, application passwords and the login forms of other plugins (WooCommerce, Easy Digital Downloads and any plugin that uses WordPress' own login). Allow-listed IP addresses are never locked out, nothing is locked out in Test Mode, and the Security screen lists current lockouts with a Release button. On by default, also on existing sites.
+- New: banned usernames. An IP address that tries "admin", "administrator", "root" and similar names that no account on your site uses is locked out at once. You can edit the list.
+- New, optional: lock out IP addresses that try any username that doesn't exist, and a lockdown mode that, during a detected brute-force attack, accepts logins only from IP addresses each user has logged in from before.
+- New: Reports show lockouts as "Too Many Failed Logins", "Banned Username" and "Login Lockdown".
+- New, optional: a custom login URL. wp-login.php and, for visitors who are not logged in, wp-admin show a "not found" page; every login, logout and password reset link follows the new address, and it is emailed to the site admin when you set it. `define('WPBRUISER_DISABLE_LOGIN_URL', true);` in wp-config.php turns it off.
+- New, optional: close the REST API to visitors who are not logged in. oEmbed, Contact Form 7, the WooCommerce Store API, Jetpack, LiteSpeed and Wordfence stay open by default, and you can add other namespaces.
+- New, optional: turn off application passwords, and block PHP files in the uploads folder (Apache and LiteSpeed; the rules are removed again when you switch the option off or deactivate WPBruiser).
+- Fix: Easy Digital Downloads' lost password form was rejected while WordPress lost password protection was on, because the form never received WPBruiser's token. It does now.
+- New: an "Upgrade to Pro" item at the bottom of the WPBruiser menu, and every Pro link now leads to a page made for people already using the free plugin. Both disappear once WPBruiser Pro is active.
+- New: a Documentation button in the Support box, linking to the new WPBruiser documentation on wpzoom.com.
+- New: an Easy Digital Downloads card on the Integrations screen (protected with WPBruiser Pro).
+- New: with WPBruiser Pro active, the sidebar shows that your site is protected: which plugins' forms are checked, attempts blocked in the last 30 days, and whether the Pro license is active. When the license has expired or isn't activated, the box, the Integrations cards and the Security screen say what is switched off and link to renew or activate it.
+- New: the Security screen shows WPBruiser Pro's country blocking and submission rate limit settings, locked, so you can see what Pro adds there.
+- Improved: a lighter look for the settings screens, with underlined tabs, on/off switches instead of checkboxes and more spacing in the lists of accepted IP formats.
+- Fix: the WPBruiser Dashboard widget showed its title at the far end of the header, away from its icon.
+- Developer: an integration's form can be marked as opt-in ('EnableByDefault' => false), so it is never switched on automatically or by the card's main switch. When a form ends up with the token field twice, every copy is now filled.
 
 = 3.3.1 =
 - New: [WPZOOM Forms](https://wordpress.org/plugins/wpzoom-forms/) integration, free. Every form is protected whether it is placed as a block, with the `[wpzf_form]` shortcode or as an Elementor widget; a blocked submission is stopped before any email is sent or entry is stored, and Reports show its fields under their labels.
