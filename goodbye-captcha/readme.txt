@@ -4,7 +4,7 @@ Tags: security, anti-spam, captcha, limit login attempts, brute force
 Requires at least: 6.5
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 3.6.2
+Stable tag: 3.6.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,12 +251,17 @@ The Integrations screen shows the icons the integrated plugins publish on WordPr
 
 == Changelog ==
 
+= 3.6.3 =
+- Security: a successful login no longer cleared every failed login recorded for that IP address, so someone with any account could log in to it between guesses at another account's password and never be locked out. Failed logins are now counted per account as well, and a login forgets only that account's failures.
+- Security: failed logins against one account are now also counted across all IP addresses, so guesses spread over several addresses still reach the lockout.
+
 = 3.6.2 =
 - Fixed: more text couldn't be translated: the Reports screen (box titles, table headers, chart labels and tooltips, the map tooltip, "No records found", Previous/Next and the block menu) and the allowed and blocked IP lists (the accepted formats and "Your IP Address is"). Chart dates now use the site language's month names.
 - Fixed: with no blocked attempts, the Reports pagination showed a page "0".
 - Fixed: the remaining English-only text can now be translated: the three alert emails, country names (in Reports, the IP lists and the security report), the "Brute Force" and "Country Blocking" names, the XML-RPC "disabled" message apps see, and "N/A". Dates in Reports and in the alert emails now follow the site's language and date format, and the Test Mode help box is written as whole sentences translators can reorder.
 - Fixed: deleting the original WPBruiser Pro (sold on CodeCanyon until 2019) also deleted the current plugin's settings and blocked-attempt logs, because both share them. They are now kept.
 - Fixed: deleting WPBruiser and the original WPBruiser Pro together could stop with a PHP error.
+- For developers: new filter `wpbruiser_module_display_name`, so add-ons can translate their module names.
 - New: a notice when the original WPBruiser Pro is still installed. It bundles an old copy of WPBruiser and is no longer needed, so it can be deactivated and deleted.
 
 = 3.6.1 =
